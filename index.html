@@ -1,0 +1,3164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CFE Monitor</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="theme-color" content="#00753A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/heic2any/dist/heic2any.min.js"></script>
+<style>
+  :root {
+    --cfe-green:   #00A651;
+    --cfe-dark:    #00753A;
+    --cfe-deep:    #004D26;
+    --bg:          #FFFFFF;
+    --panel:       #FFFFFF;
+    --panel-alt:   #F7F9F8;
+    --border:      #E2E8E4;
+    --border-dk:   #C9D4CE;
+    --text:        #16241C;
+    --muted:       #66766D;
+    --muted-lt:    #93A199;
+    --amber:       #9A6A0C;
+    --amber-bg:    #FDF5E6;
+    --amber-bd:    #F0DBA6;
+    --red:         #B0272B;
+    --red-bg:      #FCEBEA;
+    --red-bd:      #EFBBBB;
+    --blue:        #0A6693;
+    --blue-bg:     #EAF4F9;
+    --blue-bd:     #B9DCEC;
+    --green-bg:    #E9F7EE;
+    --green-bd:    #BBE6CC;
+    --shadow:      0 1px 2px rgba(16,36,24,0.05), 0 1px 1px rgba(16,36,24,0.03);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .icon { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; vertical-align:-2px; }
+  .icon-sm { width:12px; height:12px; }
+  .icon-lg { width:18px; height:18px; }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top:0; z-index:100;
+    box-shadow: var(--shadow);
+  }
+  .header-logo { display:flex; align-items:center; gap:12px; }
+  .cfe-badge {
+    background: var(--cfe-green);
+    color:#fff;
+    font-size:14px; font-weight:800;
+    padding: 6px 12px;
+    letter-spacing: 1px;
+    border-radius:4px;
+  }
+  .header-title { font-size:10px; font-weight:600; letter-spacing:2px; color: var(--muted); text-transform:uppercase; }
+  .header-name  { font-size:13px; font-weight:700; color: var(--text); letter-spacing:0.2px; }
+  .live-dot {
+    display:flex; align-items:center; justify-content:flex-end; gap:6px;
+    font-size:10px; font-weight:600; color: var(--cfe-dark); letter-spacing:1.5px;
+    text-transform:uppercase;
+  }
+  .live-dot::before {
+    content:''; width:7px; height:7px; border-radius:50%;
+    background: var(--cfe-green);
+    animation: blink 1.6s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+  .container { padding: 16px; max-width:900px; margin:0 auto; }
+
+  .section-title {
+    display:flex; align-items:center; gap:7px;
+    font-size:10px; font-weight:700; letter-spacing:2px; color:var(--muted);
+    text-transform:uppercase; margin-bottom:12px;
+  }
+  .section-title .icon { color: var(--cfe-dark); }
+
+  /* ── INFO CHIPS ── */
+  .info-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  .info-chip {
+    background: var(--panel-alt); border:1px solid var(--border);
+    border-radius:4px; padding:5px 10px;
+    font-size:11px; color:var(--muted); letter-spacing:0.2px;
+  }
+  .info-chip strong { color:var(--text); font-weight:600; }
+
+  /* ── BIG METER ── */
+  .meter-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--cfe-green);
+    border-radius:8px;
+    padding: 22px 20px;
+    margin-bottom:16px;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+  .meter-label {
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    font-size:10px; letter-spacing:3px; color: var(--muted);
+    text-transform:uppercase; margin-bottom:10px;
+  }
+  .meter-display {
+    display:flex; justify-content:center; align-items:flex-end;
+    gap:0;
+    background: var(--green-bg);
+    border: 1px solid var(--green-bd);
+    border-radius:6px;
+    padding: 16px 20px;
+    margin: 10px 0;
+  }
+  .meter-digits {
+    font-family:'JetBrains Mono',monospace;
+    font-size: clamp(34px,8vw,64px);
+    font-weight:700;
+    color: var(--cfe-deep);
+    letter-spacing:1px;
+    font-variant-numeric: tabular-nums;
+  }
+  .meter-unit {
+    font-family:'JetBrains Mono',monospace;
+    font-size:14px; font-weight:600; color: var(--cfe-dark);
+    align-self:flex-end; margin-bottom:8px; margin-left:8px;
+    letter-spacing:1px;
+  }
+  .meter-sub { display:flex; justify-content:center; gap:32px; margin-top:10px; }
+  .meter-sub-item { text-align:center; }
+  .meter-sub-val {
+    font-family:'JetBrains Mono',monospace;
+    font-size:clamp(17px,4vw,24px); font-weight:700;
+    color: var(--amber);
+  }
+  .meter-sub-lbl { font-size:9px; color: var(--muted); letter-spacing:1.5px; text-transform:uppercase; margin-top:3px; }
+  .meter-sep { width:1px; background: var(--border); margin: 4px 0; }
+  .meter-warn-badge {
+    display:none; align-items:center; gap:6px; justify-content:center;
+    margin-top:12px; padding:6px 10px; border-radius:4px;
+    background:var(--amber-bg); border:1px solid var(--amber-bd); color:var(--amber);
+    font-size:10px; font-weight:600; letter-spacing:0.5px;
+  }
+  .meter-warn-badge.show { display:flex; }
+
+  /* ── CALIBRATION PANEL (real reading capture) ── */
+  .calib-panel {
+    background: var(--panel);
+    border:1px solid var(--border);
+    border-top: 3px solid var(--cfe-dark);
+    border-radius:8px;
+    padding:18px;
+    margin-bottom:16px;
+    box-shadow: var(--shadow);
+  }
+  .calib-status {
+    display:flex; flex-wrap:wrap; gap:16px; margin-bottom:14px;
+    padding:10px 12px; background:var(--panel-alt); border:1px solid var(--border); border-radius:6px;
+  }
+  .calib-status-item { font-size:11px; color:var(--muted); }
+  .calib-status-item strong { color:var(--text); font-family:'JetBrains Mono',monospace; }
+  .calib-form {
+    display:grid; grid-template-columns: 1.3fr 1.3fr auto; gap:10px; align-items:end;
+  }
+  .form-field label {
+    display:flex; align-items:center; gap:5px;
+    font-size:10px; font-weight:600; color:var(--muted); letter-spacing:1px;
+    text-transform:uppercase; margin-bottom:6px;
+  }
+  .form-field input {
+    width:100%; padding:9px 10px;
+    border:1px solid var(--border-dk); border-radius:5px;
+    font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--text);
+    background:#fff;
+  }
+  .form-field input:focus { outline:none; border-color:var(--cfe-green); box-shadow:0 0 0 3px rgba(0,166,81,0.12); }
+  .form-hint { font-size:10px; color:var(--muted-lt); margin-top:5px; }
+  .btn-primary {
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    background: var(--cfe-dark); color:#fff;
+    border:none; border-radius:5px; padding:10px 16px;
+    font-family:'Inter',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.3px;
+    cursor:pointer; white-space:nowrap;
+    transition: background 0.15s ease;
+  }
+  .btn-primary:hover { background: var(--cfe-deep); }
+  .form-msg {
+    display:none; align-items:center; gap:7px;
+    margin-top:12px; padding:9px 12px; border-radius:5px;
+    font-size:11.5px; font-weight:500;
+  }
+  .form-msg.show { display:flex; }
+  .form-msg.success { background:var(--green-bg); border:1px solid var(--green-bd); color:var(--cfe-deep); }
+  .form-msg.error   { background:var(--red-bg); border:1px solid var(--red-bd); color:var(--red); }
+
+  @media(max-width:640px) {
+    .calib-form { grid-template-columns: 1fr; }
+  }
+
+  /* ── STATS ROW ── */
+  .stats-row {
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px,1fr));
+    gap:10px; margin-bottom:16px;
+  }
+  .stat-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius:6px;
+    padding:14px 12px;
+    position:relative; overflow:hidden;
+    box-shadow: var(--shadow);
+  }
+  .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+  .stat-card.green::before  { background: var(--cfe-green); }
+  .stat-card.amber::before  { background: var(--amber); }
+  .stat-card.red::before    { background: var(--red); }
+  .stat-card.blue::before   { background: var(--blue); }
+
+  .stat-lbl { font-size:9px; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase; margin-bottom:7px; }
+  .stat-val { font-family:'JetBrains Mono',monospace; font-size:clamp(16px,3.5vw,21px); font-weight:700; letter-spacing:0.2px; }
+  .stat-card.green .stat-val  { color: var(--cfe-deep); }
+  .stat-card.amber .stat-val  { color: var(--amber); }
+  .stat-card.red .stat-val    { color: var(--red); }
+  .stat-card.blue .stat-val   { color: var(--blue); }
+  .stat-sub { font-size:10px; color:var(--muted); margin-top:5px; }
+
+  /* ── PROGRESS BAR ── */
+  .progress-panel { background: var(--panel); border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:16px; box-shadow: var(--shadow); }
+  .progress-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .progress-pct { font-family:'JetBrains Mono',monospace; font-size:19px; font-weight:700; color:var(--amber); }
+  .tier-bar { height:22px; background:var(--panel-alt); border-radius:4px; overflow:hidden; border:1px solid var(--border); display:flex; margin-bottom:10px; }
+  .tier-seg { height:100%; transition:width 0.5s ease; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; letter-spacing:0.5px; overflow:hidden; white-space:nowrap; }
+  .tier-basic  { background: var(--cfe-green); color:#fff; }
+  .tier-inter  { background: var(--amber); color:#fff; }
+  .tier-excess { background: var(--red); color:#fff; }
+  .tier-remain { background: var(--panel-alt); flex:1; }
+  .tier-labels { display:flex; gap:14px; flex-wrap:wrap; font-size:10px; color:var(--muted); }
+  .tier-labels span { display:flex; align-items:center; gap:5px; }
+  .dot { width:7px; height:7px; border-radius:50%; display:inline-block; }
+
+  /* ── PREDICTION ── */
+  .pred-panel { background: var(--panel); border:1px solid var(--border); border-top:3px solid var(--amber); border-radius:8px; padding:16px; margin-bottom:16px; box-shadow: var(--shadow); }
+  .pred-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap:10px; }
+  .pred-item { background: var(--panel-alt); border:1px solid var(--border); border-radius:6px; padding:12px; }
+  .pred-item-lbl { font-size:9px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:7px; }
+  .pred-item-val { font-family:'JetBrains Mono',monospace; font-size:clamp(15px,3vw,19px); font-weight:700; }
+  .pred-item-sub { font-size:10px; color:var(--muted); margin-top:5px; }
+
+  .conf-row { display:flex; align-items:center; gap:8px; margin-top:7px; }
+  .conf-lbl { font-size:9px; color:var(--muted); width:100px; }
+  .conf-bar-wrap { flex:1; height:5px; background:var(--panel-alt); border:1px solid var(--border); border-radius:3px; overflow:hidden; }
+  .conf-bar { height:100%; background: var(--cfe-green); border-radius:3px; }
+  .conf-val { font-size:10px; color:var(--amber); width:38px; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:600; }
+
+  /* ── WATT TICKER ── */
+  .ticker-panel {
+    background: var(--cfe-deep); color:#fff;
+    border-radius:8px; padding:16px;
+    margin-bottom:16px;
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    box-shadow: var(--shadow);
+  }
+  .ticker-icon { color:#fff; opacity:0.85; }
+  .ticker-col { flex:1; min-width:110px; }
+  .ticker-lbl { font-size:9px; color:rgba(255,255,255,0.65); letter-spacing:1.5px; text-transform:uppercase; }
+  .ticker-val { font-family:'JetBrains Mono',monospace; font-size:clamp(19px,5vw,28px); font-weight:700; color:#fff; }
+  .ticker-val-pesos { font-family:'JetBrains Mono',monospace; font-size:clamp(14px,3.5vw,18px); font-weight:600; color:#B7E8C8; }
+
+  /* ── LECTURAS HISTORY ── */
+  .lecturas-panel { background: var(--panel); border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:16px; box-shadow: var(--shadow); }
+  .lecturas-table { width:100%; border-collapse:collapse; font-size:11.5px; }
+  .lecturas-table th {
+    text-align:left; font-size:9px; letter-spacing:1px; color:var(--muted); text-transform:uppercase;
+    padding:0 8px 8px 8px; border-bottom:1px solid var(--border); font-weight:600;
+  }
+  .lecturas-table td { padding:9px 8px; border-bottom:1px solid var(--border); font-family:'JetBrains Mono',monospace; color:var(--text); }
+  .lecturas-table tr:last-child td { border-bottom:none; }
+  .badge-origen {
+    font-family:'Inter',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.3px;
+    padding:3px 7px; border-radius:3px; text-transform:uppercase;
+  }
+  .badge-manual   { background:var(--green-bg); color:var(--cfe-deep); border:1px solid var(--green-bd); }
+  .badge-inicial  { background:var(--blue-bg); color:var(--blue); border:1px solid var(--blue-bd); }
+  .btn-icon {
+    background:transparent; border:1px solid var(--border-dk); border-radius:4px;
+    width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center;
+    color:var(--muted); cursor:pointer; transition: all 0.15s ease;
+  }
+  .btn-icon:hover { border-color:var(--red); color:var(--red); background:var(--red-bg); }
+  .btn-icon + .btn-icon { margin-left:5px; }
+  .btn-icon-ok:hover { border-color:var(--cfe-green); color:var(--cfe-dark); background:var(--green-bg); }
+  .lecturas-empty { font-size:11px; color:var(--muted-lt); text-align:center; padding:16px 0; }
+  .edit-input {
+    width:100%; padding:6px 8px;
+    border:1px solid var(--cfe-green); border-radius:4px;
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--text);
+    background:#fff;
+  }
+  .edit-input:focus { outline:none; box-shadow:0 0 0 3px rgba(0,166,81,0.12); }
+
+  /* ── HISTÓRICO mini ── */
+  .hist-panel { background: var(--panel); border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:16px; box-shadow: var(--shadow); }
+  .hist-bars { display:flex; align-items:flex-end; gap:6px; height:64px; }
+  .hist-bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .hist-bar { width:100%; border-radius:2px 2px 0 0; transition: height 0.3s ease; min-height:2px; }
+  .hist-bar-lbl { font-size:8px; color:var(--muted); letter-spacing:0.5px; text-align:center; }
+  .hist-bar-val { font-size:9px; font-family:'JetBrains Mono',monospace; color:var(--cfe-dark); font-weight:600; }
+  .hist-foot { margin-top:10px; font-size:9.5px; color:var(--muted); letter-spacing:0.3px; }
+
+  /* ── TARIFA TABLE ── */
+  .tarifa-panel { background: var(--panel); border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:16px; box-shadow: var(--shadow); }
+  .tarifa-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--border); font-size:12px; }
+  .tarifa-row:last-child { border-bottom:none; }
+  .tarifa-tier-badge { font-size:9px; font-weight:700; letter-spacing:1px; padding:3px 8px; border-radius:3px; text-transform:uppercase; }
+  .badge-basic  { background:var(--green-bg); color:var(--cfe-deep); border:1px solid var(--green-bd); }
+  .badge-inter  { background:var(--amber-bg); color:var(--amber); border:1px solid var(--amber-bd); }
+  .badge-excess { background:var(--red-bg); color:var(--red); border:1px solid var(--red-bd); }
+  .tarifa-kwh   { font-family:'JetBrains Mono',monospace; color:var(--muted); font-size:11px; }
+  .tarifa-price { font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; color:var(--text); }
+
+  /* ── FOOTER ── */
+  footer { text-align:center; padding:20px; font-size:10px; color:var(--muted); letter-spacing:1px; border-top:1px solid var(--border); }
+  footer span { color:var(--cfe-dark); font-weight:600; }
+
+  .timestamp { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); letter-spacing:0.5px; }
+
+  @media(max-width:480px) {
+    .meter-digits { font-size:38px; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .pred-grid  { grid-template-columns: 1fr 1fr; }
+    .lecturas-table { font-size:10.5px; }
+    .lecturas-table th:nth-child(4), .lecturas-table td:nth-child(4) { display:none; }
+  }
+
+  /* ── DATOS CURIOSOS (carrusel) ── */
+  .curioso-panel {
+    position:relative; overflow:hidden;
+    background: var(--panel);
+    border:1px solid var(--border);
+    border-top: 3px solid var(--cfe-green);
+    border-radius:8px;
+    padding:14px 16px 16px;
+    margin-bottom:16px;
+    display:flex; align-items:center; gap:12px;
+    box-shadow: var(--shadow);
+    transition: background 0.35s ease, border-color 0.35s ease;
+    touch-action: pan-y;
+    -webkit-user-select:none; user-select:none;
+  }
+  .curioso-icon { color: var(--cfe-dark); flex-shrink:0; display:flex; transition: color 0.35s ease; }
+  .curioso-body { flex:1; min-width:0; }
+  .curioso-label { font-size:9px; font-weight:700; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase; margin-bottom:4px; }
+  .curioso-texto { font-size:12.5px; line-height:1.45; color:var(--text); font-weight:500; transition:opacity 0.25s ease, color 0.35s ease; min-height:34px; }
+  .curioso-progress { position:absolute; left:0; bottom:0; height:2px; width:100%; background:var(--border); }
+  .curioso-progress-bar { height:100%; width:0%; background: var(--cfe-green); }
+
+  .curioso-panel.curioso-alerta { background: var(--red-bg); border-top-color: var(--red); }
+  .curioso-panel.curioso-alerta .curioso-texto { color: var(--red); font-weight:600; }
+  .curioso-panel.curioso-alerta .curioso-icon { color: var(--red); }
+  .curioso-panel.curioso-alerta .curioso-progress-bar { background: var(--red); }
+
+  .curioso-panel.curioso-ahorro { background: var(--green-bg); border-top-color: var(--cfe-green); }
+  .curioso-panel.curioso-ahorro .curioso-texto { color: var(--cfe-deep); font-weight:600; }
+  .curioso-panel.curioso-ahorro .curioso-icon { color: var(--cfe-dark); }
+  .curioso-panel.curioso-ahorro .curioso-progress-bar { background: var(--cfe-green); }
+
+  .curioso-panel.curioso-ok .curioso-texto { color: var(--cfe-dark); font-weight:600; }
+  .curioso-panel.curioso-ok .curioso-progress-bar { background: var(--cfe-green); }
+
+  /* ── ONBOARDING ── */
+  .ob-overlay {
+    position: fixed; inset:0; z-index: 1000;
+    background: linear-gradient(180deg, #F7FBF8 0%, #EFF6F1 100%);
+    overflow-y:auto;
+  }
+  .ob-step { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px 16px; }
+  .ob-card {
+    background:#fff; border:1px solid var(--border); border-radius:10px;
+    box-shadow: 0 4px 24px rgba(16,36,24,0.08);
+    padding:28px 24px; max-width:480px; width:100%;
+  }
+  .ob-card-center { text-align:center; }
+  .ob-logo { display:flex; justify-content:center; margin-bottom:18px; }
+  .ob-title { font-size:24px; font-weight:800; color:var(--text); margin-bottom:10px; }
+  .ob-h2 { font-size:17px; font-weight:700; color:var(--text); margin-bottom:6px; }
+  .ob-h3 { font-size:12px; font-weight:700; letter-spacing:1px; color:var(--muted); text-transform:uppercase; margin:18px 0 8px; }
+  .ob-sub { font-size:13px; color:var(--muted); line-height:1.55; }
+  .ob-list { list-style:none; text-align:left; margin:18px 0; display:flex; flex-direction:column; gap:8px; }
+  .ob-list li { font-size:12.5px; color:var(--text); padding-left:20px; position:relative; }
+  .ob-list li::before { content:'✓'; position:absolute; left:0; color:var(--cfe-green); font-weight:800; }
+  .ob-btn {
+    border:none; border-radius:6px; font-family:inherit; font-size:13px; font-weight:700;
+    padding:11px 18px; cursor:pointer; letter-spacing:0.2px; transition:opacity .15s;
+  }
+  .ob-btn:disabled { opacity:.4; cursor:not-allowed; }
+  .ob-btn-primary { background:var(--cfe-green); color:#fff; width:100%; }
+  .ob-btn-primary:hover:not(:disabled) { opacity:.92; }
+  .ob-btn-ghost { background:var(--panel-alt); color:var(--text); border:1px solid var(--border); }
+  .ob-btn-sm { padding:7px 12px; font-size:11px; margin-top:10px; }
+  .ob-mode-btn.is-active { background:var(--cfe-dark); color:#fff; border-color:var(--cfe-dark); }
+  .ob-actions { display:flex; gap:10px; margin-top:18px; }
+  .ob-actions .ob-btn { flex:1; }
+  .ob-scrollbox {
+    max-height:260px; overflow-y:auto; font-size:12px; line-height:1.6; color:var(--text);
+    background:var(--panel-alt); border:1px solid var(--border); border-radius:6px;
+    padding:14px; margin:14px 0; display:flex; flex-direction:column; gap:10px;
+  }
+  .ob-check {
+    display:flex; align-items:flex-start; gap:8px; font-size:12px; color:var(--text);
+    margin-top:14px; cursor:pointer; line-height:1.5;
+  }
+  .ob-check input { margin-top:2px; }
+  .ob-upload-row { display:flex; gap:10px; margin-bottom:16px; }
+  .ob-upload-box {
+    position:relative; flex:1; aspect-ratio:3/4; border:1.5px dashed var(--border-dk);
+    border-radius:8px; background:var(--panel-alt); overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .ob-upload-box.has-image { border-style:solid; border-color:var(--cfe-green); }
+  .ob-file-input { position:absolute; inset:0; opacity:0; cursor:pointer; z-index:2; }
+  .ob-upload-placeholder { text-align:center; color:var(--muted); font-size:11px; padding:10px; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .ob-upload-placeholder .icon-lg { color:var(--muted-lt); }
+  .ob-upload-preview { width:100%; height:100%; object-fit:cover; }
+  .ob-field { margin-bottom:8px; }
+  .ob-label { display:block; font-size:11px; font-weight:600; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.5px; }
+  .ob-input, .ob-select {
+    width:100%; padding:9px 10px; border:1px solid var(--border-dk); border-radius:5px;
+    font-family:inherit; font-size:13px; color:var(--text); background:#fff;
+  }
+  .ob-input:focus, .ob-select:focus { outline:none; border-color:var(--cfe-green); }
+  .ob-hint { font-size:10.5px; color:var(--muted-lt); margin-top:4px; }
+  .ob-error {
+    background:var(--red-bg); border:1px solid var(--red-bd); color:var(--red);
+    font-size:12px; border-radius:6px; padding:10px 12px; margin-top:12px;
+  }
+  .ob-spinner {
+    width:36px; height:36px; border-radius:50%; margin:0 auto;
+    border:3px solid var(--border); border-top-color:var(--cfe-green);
+    animation: obspin 0.8s linear infinite;
+  }
+  @keyframes obspin { to { transform:rotate(360deg); } }
+  .ob-review-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .ob-review-grid .ob-field.full { grid-column:1 / -1; }
+  .ob-hist-table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:6px; }
+  .ob-hist-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .ob-hist-table th {
+    background:var(--panel-alt); text-align:left; padding:7px 8px; font-size:10px;
+    text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); border-bottom:1px solid var(--border);
+  }
+  .ob-hist-table td { padding:5px 6px; border-bottom:1px solid var(--border); }
+  .ob-hist-table input { width:100%; border:1px solid var(--border-dk); border-radius:4px; padding:4px 6px; font-size:11.5px; font-family:inherit; }
+  .ob-hist-table .ob-hist-del { background:none; border:none; color:var(--red); cursor:pointer; font-size:14px; padding:0 4px; }
+  @media (max-width:480px) {
+    .ob-review-grid { grid-template-columns:1fr; }
+    .ob-card { padding:22px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     ONBOARDING — Bienvenida / Aviso de privacidad / Carga de
+     recibo / Extracción / Revisión y edición de datos
+     ═══════════════════════════════════════════════════════════ -->
+<div id="ob-overlay" class="ob-overlay">
+
+  <!-- PASO SERVICIOS: CAMBIAR DE SERVICIO/MEDIDOR -->
+  <div class="ob-step" id="ob-step-servicios" style="display:none;">
+    <div class="ob-card">
+      <h2 class="ob-h2">Servicios / medidores</h2>
+      <p class="ob-sub" style="margin-bottom:14px;">Cambia entre tus recibos guardados, agrega uno nuevo o elimina el que ya no uses.</p>
+      <div id="ob-servicios-lista"><!-- generado por JS --></div>
+
+      <div style="border-top:1px solid var(--border); margin-top:16px; padding-top:14px;">
+        <h3 style="font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin:0 0 10px;">Ajustes</h3>
+
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px;">
+          <div style="min-width:0;">
+            <div style="font-weight:600; font-size:13px;">Avisarme cerca del excedente</div>
+            <div style="font-size:11px; color:var(--muted); margin-top:2px;">Notificación aunque no tengas la app abierta.</div>
+          </div>
+          <label style="display:inline-flex; align-items:center; cursor:pointer; flex-shrink:0;">
+            <input type="checkbox" id="ob-check-notif-excedente" style="width:18px; height:18px;">
+          </label>
+        </div>
+
+        <div class="ob-actions" style="margin-top:0;">
+          <button class="ob-btn ob-btn-ghost" id="ob-btn-exportar-json" title="Descarga todos tus servicios y lecturas en un archivo JSON">Respaldar (JSON)</button>
+          <button class="ob-btn ob-btn-ghost" id="ob-btn-exportar-csv" title="Descarga tu histórico de lecturas en una hoja de cálculo">Respaldar (CSV)</button>
+        </div>
+      </div>
+
+      <div class="ob-actions" style="margin-top:16px;">
+        <button class="ob-btn ob-btn-ghost" id="ob-btn-servicios-cerrar">Cerrar</button>
+        <button class="ob-btn ob-btn-primary" id="ob-btn-servicios-agregar">+ Agregar servicio nuevo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASO 0: BIENVENIDA -->
+  <div class="ob-step" id="ob-step-bienvenida">
+    <div class="ob-card ob-card-center">
+      <div class="ob-logo"><div class="cfe-badge" style="font-size:20px;padding:10px 18px;">CFE</div></div>
+      <h1 class="ob-title">CFE Monitor</h1>
+      <p class="ob-sub">Sigue tu consumo eléctrico en tiempo real, con proyecciones de costo basadas en tu recibo real y tus propias lecturas de medidor.</p>
+      <ul class="ob-list">
+        <li>Extrae automáticamente los datos de tu recibo CFE</li>
+        <li>Calibra el consumo en vivo con lecturas reales</li>
+        <li>Proyecta el costo estimado de tu próximo pago</li>
+      </ul>
+      <button class="ob-btn ob-btn-primary" id="ob-btn-empezar">Empezar</button>
+    </div>
+  </div>
+
+  <!-- PASO 1: AVISO DE PRIVACIDAD Y TÉRMINOS -->
+  <div class="ob-step" id="ob-step-privacidad" style="display:none;">
+    <div class="ob-card">
+      <h2 class="ob-h2">Aviso de privacidad y términos de uso</h2>
+      <div class="ob-scrollbox">
+        <p><strong>Uso de tus datos.</strong> Las fotos de tu recibo CFE se procesan para extraer los datos de consumo y facturación (titular, servicio, medidor, lecturas, tarifas e histórico). Estos datos se guardan únicamente en el almacenamiento local de este navegador (<em>localStorage</em>); no se envían a ningún servidor propio ni a ninguna API externa.</p>
+        <p><strong>Lectura del recibo (OCR local mejorado).</strong> El texto de tu recibo se lee con Tesseract.js, un motor de reconocimiento óptico de código abierto que corre completamente en tu propio navegador. Antes de leerlo, cada imagen pasa por un preprocesamiento (escala de grises, ajuste de contraste, nitidez y aumento de resolución) que mejora bastante la precisión en fotos borrosas, inclinadas o con sombras. Sube dos fotos: anverso y reverso de tu recibo.</p>
+        <p><strong>Responsabilidad del usuario.</strong> Esta herramienta ofrece estimaciones informativas de consumo y costo; no sustituye tu recibo oficial de CFE ni tiene validez fiscal. Verifica siempre los datos extraídos antes de continuar — podrás editarlos manualmente si algo no coincide con tu recibo.</p>
+        <p><strong>Control de tus datos.</strong> Puedes borrar toda la información guardada en cualquier momento desde el navegador (borrando datos del sitio) o reiniciando la configuración desde este mismo monitor.</p>
+      </div>
+      <label class="ob-check">
+        <input type="checkbox" id="ob-check-privacidad">
+        He leído y acepto el aviso de privacidad y los términos de uso.
+      </label>
+      <div class="ob-actions">
+        <button class="ob-btn ob-btn-ghost" id="ob-btn-priv-atras">Atrás</button>
+        <button class="ob-btn ob-btn-primary" id="ob-btn-priv-continuar" disabled>Continuar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASO 2: CARGA DE RECIBO (ANVERSO / REVERSO) + LECTURA INICIAL -->
+  <div class="ob-step" id="ob-step-carga" style="display:none;">
+    <div class="ob-card">
+      <h2 class="ob-h2">Sube tu recibo CFE</h2>
+      <p class="ob-sub" style="margin-bottom:12px;">Sube una foto del anverso y otra del reverso de tu recibo. Las imágenes se mejoran automáticamente (contraste, nitidez, resolución) antes de leerlas, para mayor precisión.</p>
+
+      <div id="ob-modo-fotos-panel">
+        <div class="ob-upload-row">
+          <div class="ob-upload-box" id="ob-box-frente">
+            <input type="file" accept="image/*" id="ob-file-frente" class="ob-file-input">
+            <div class="ob-upload-placeholder" id="ob-placeholder-frente">
+              <svg class="icon-lg" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <div>Anverso del recibo</div>
+              <div class="ob-upload-hint">Totales, medidor, período</div>
+            </div>
+            <img class="ob-upload-preview" id="ob-preview-frente" style="display:none;">
+          </div>
+          <div class="ob-upload-box" id="ob-box-reverso">
+            <input type="file" accept="image/*" id="ob-file-reverso" class="ob-file-input">
+            <div class="ob-upload-placeholder" id="ob-placeholder-reverso">
+              <svg class="icon-lg" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <div>Reverso del recibo</div>
+              <div class="ob-upload-hint">Consumo histórico</div>
+            </div>
+            <img class="ob-upload-preview" id="ob-preview-reverso" style="display:none;">
+          </div>
+        </div>
+      </div>
+
+      <div class="ob-field" style="margin-top:14px; display:none;">
+        <label class="ob-label">API Key de Groq — visión con IA (opcional, recomendado)</label>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="password" class="ob-input" id="ob-groq-key" placeholder="gsk_..." autocomplete="off" spellcheck="false" style="flex:1;">
+          <button type="button" id="ob-groq-toggle" style="padding:8px 12px;border:1px solid var(--border-dk);border-radius:5px;background:#fff;cursor:pointer;font-size:12px;white-space:nowrap;">Ver</button>
+        </div>
+        <div class="ob-hint">
+          Con esta clave se usa <strong>Llama 4 Scout (Groq)</strong> para leer el recibo — mucho más preciso que el OCR local, especialmente con fotos torcidas o con sombras.
+          Sin ella se usa Tesseract.js (OCR local, gratis, sin límite).
+          La clave se guarda solo en este navegador.
+          <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Obtén tu clave gratis en console.groq.com</a>.
+        </div>
+      </div>
+
+      <div class="ob-field" style="margin-top:14px;">
+        <label class="ob-label">Lectura inicial de tu medidor ahora mismo (kWh)</label>
+        <input type="number" step="0.01" class="ob-input" id="ob-lectura-inicial" placeholder="Ej. 3630.00">
+        <div class="ob-hint">Esta lectura será el punto de partida de tu monitoreo en vivo.</div>
+      </div>
+
+      <div class="ob-actions">
+        <button class="ob-btn ob-btn-ghost" id="ob-btn-carga-atras">Atrás</button>
+        <button class="ob-btn ob-btn-primary" id="ob-btn-extraer">Extraer datos del recibo</button>
+      </div>
+      <div class="ob-error" id="ob-error-carga" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- PASO 3: PROCESANDO -->
+  <div class="ob-step" id="ob-step-procesando" style="display:none;">
+    <div class="ob-card ob-card-center">
+      <div class="ob-spinner"></div>
+      <h2 class="ob-h2" style="margin-top:18px;">Leyendo tu recibo…</h2>
+      <p class="ob-sub" id="ob-procesando-msg">Leyendo el recibo con OCR local (gratis, sin límite de uso)…</p>
+    </div>
+  </div>
+
+  <!-- PASO 4: REVISIÓN / EDICIÓN -->
+  <div class="ob-step" id="ob-step-revision" style="display:none;">
+    <div class="ob-card">
+      <h2 class="ob-h2">Revisa los datos extraídos</h2>
+      <p class="ob-sub" id="ob-revision-sub" style="margin-bottom:14px;">Confirma que coincidan con tu recibo. Si algo está mal, puedes editarlo manualmente.</p>
+
+      <div class="ob-review-grid" id="ob-review-grid"><!-- generado por JS --></div>
+
+      <h3 class="ob-h3">Histórico de consumo (bimestres anteriores)</h3>
+      <div class="ob-hist-table-wrap">
+        <table class="ob-hist-table" id="ob-hist-table"><!-- generado por JS --></table>
+      </div>
+      <button class="ob-btn ob-btn-ghost ob-btn-sm" id="ob-btn-hist-add" type="button">+ Agregar bimestre</button>
+      <p class="ob-sub" id="ob-hist-contador" style="margin-top:6px;"></p>
+
+      <details id="ob-debug-texto-wrap" style="margin-top:14px; display:none;">
+        <summary style="cursor:pointer; font-size:13px; color:var(--muted);">Ver texto crudo que leyó el OCR/PDF (para depurar)</summary>
+        <p class="ob-sub" style="margin:6px 0;">Si algo no se extrajo bien, copia este texto tal cual y pégamelo — así ajusto el patrón con el texto real de tu recibo, en vez de adivinar.</p>
+        <textarea id="ob-debug-texto" readonly style="width:100%; min-height:160px; font-family:monospace; font-size:11px; padding:8px; box-sizing:border-box;"></textarea>
+        <button type="button" class="ob-btn ob-btn-ghost ob-btn-sm" id="ob-btn-debug-copiar" style="margin-top:6px;">Copiar texto</button>
+      </details>
+
+      <div class="ob-error" id="ob-error-revision" style="display:none;"></div>
+
+      <div class="ob-actions">
+        <button class="ob-btn ob-btn-ghost" id="ob-btn-revision-reintentar">Reintentar extracción</button>
+        <button class="ob-btn ob-btn-primary" id="ob-btn-revision-confirmar">Los datos son correctos, avanzar</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<!-- /ONBOARDING -->
+
+<!-- HEADER -->
+<header>
+  <div class="header-logo">
+    <div class="cfe-badge">CFE</div>
+    <div>
+      <div class="header-title">Monitor de Consumo</div>
+      <div class="header-name" id="hdr-nombre">Titular del servicio</div>
+    </div>
+  </div>
+  <div style="display:flex; align-items:center; gap:14px;">
+    <button id="btn-actualizar-recibo" title="Cambiar de servicio/medidor" style="background:none;border:1px solid var(--border-dk);border-radius:5px;padding:5px 9px;cursor:pointer;color:var(--muted);display:flex;align-items:center;gap:5px;font-size:10px;font-family:inherit;font-weight:600;letter-spacing:0.3px;">
+      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/></svg>
+      Cambiar servicio
+    </button>
+    <div>
+      <div class="live-dot">En vivo</div>
+      <div class="timestamp" id="clock" style="text-align:right;">--:--:--</div>
+    </div>
+  </div>
+</header>
+
+<div id="cfe-app-root" style="display:none;">
+<div class="container">
+
+  <!-- DATOS CURIOSOS (carrusel) -->
+  <div class="curioso-panel" id="curioso-panel">
+    <div class="curioso-icon">
+      <svg class="icon-lg" viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0018 8 6 6 0 006 8a4.65 4.65 0 001.5 3.5c.76.76 1.23 1.52 1.41 2.5"/></svg>
+    </div>
+    <div class="curioso-body">
+      <div class="curioso-label">¿Sabías que…?</div>
+      <div class="curioso-texto" id="curioso-texto">Cargando datos curiosos…</div>
+    </div>
+    <div class="curioso-progress"><div class="curioso-progress-bar" id="curioso-bar"></div></div>
+  </div>
+
+  <!-- INFO CHIPS -->
+  <div class="info-row">
+    <div class="info-chip">Servicio <strong id="chip-servicio">062920756994</strong></div>
+    <div class="info-chip">Tarifa <strong id="chip-tarifa">01 Doméstica</strong></div>
+    <div class="info-chip">Período inicia <strong id="chip-inicio">03 JUL 26</strong></div>
+    <div class="info-chip">Corte estimado <strong id="chip-corte">~02 SEP 26</strong></div>
+    <div class="info-chip">Lectura base <strong id="chip-base">3630 kWh</strong></div>
+    <div class="info-chip">Lecturas reales <strong id="chip-lecturas">3</strong></div>
+  </div>
+
+  <!-- BIG METER -->
+  <div class="meter-panel">
+    <div class="meter-label">
+      <svg class="icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Consumo Acumulado Este Período
+    </div>
+    <div class="meter-display">
+      <div class="meter-digits" id="main-kwh">36.700000</div>
+      <div class="meter-unit">kWh</div>
+    </div>
+    <div class="meter-sub">
+      <div class="meter-sub-item">
+        <div class="meter-sub-val" id="main-watts">42.0</div>
+        <div class="meter-sub-lbl">Watts ahora</div>
+      </div>
+      <div class="meter-sep"></div>
+      <div class="meter-sub-item">
+        <div class="meter-sub-val" id="main-pesos">$--.-</div>
+        <div class="meter-sub-lbl">$ Facturado</div>
+      </div>
+      <div class="meter-sep"></div>
+      <div class="meter-sub-item">
+        <div class="meter-sub-val" id="main-dias">-</div>
+        <div class="meter-sub-lbl">Días activos</div>
+      </div>
+    </div>
+    <div class="meter-warn-badge" id="warn-badge">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Consumo dentro del bloque intermedio de tarifa
+    </div>
+  </div>
+
+  <!-- CALIBRATION PANEL -->
+  <div class="calib-panel">
+    <div class="section-title">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      Registrar Lectura Real del Medidor
+    </div>
+    <div class="calib-status">
+      <div class="calib-status-item">Tasa actual: <strong id="calib-tasa">--</strong> kWh/día</div>
+      <div class="calib-status-item">Última calibración: <strong id="calib-ultima">--</strong></div>
+      <div class="calib-status-item">Método: <strong id="calib-metodo">regresión sobre 1 punto</strong></div>
+    </div>
+    <form class="calib-form" id="form-lectura">
+      <div class="form-field">
+        <label>
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 11h.01M10 11h.01M14 11h.01"/></svg>
+          Lectura del medidor (acumulado, kWh)
+        </label>
+        <input type="number" step="0.0001" id="input-medidor" placeholder="Ej. 3677.00" required>
+        <div class="form-hint">Escribe el número tal cual lo ves ahora en tu medidor físico (el total acumulado). La app calcula sola el consumo del período restando la lectura inicial de tu recibo.</div>
+      </div>
+      <div class="form-field">
+        <label>
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Fecha y hora de la lectura
+        </label>
+        <input type="datetime-local" id="input-fecha" required>
+      </div>
+      <button type="submit" class="btn-primary">
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Registrar
+      </button>
+    </form>
+    <div class="form-msg" id="form-msg"></div>
+  </div>
+
+  <!-- WATT TICKER -->
+  <div class="ticker-panel">
+    <svg class="icon-lg ticker-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <div class="ticker-col">
+      <div class="ticker-lbl">Watts en tiempo real</div>
+      <div class="ticker-val" id="tick-watts">--.- W</div>
+    </div>
+    <div class="ticker-col">
+      <div class="ticker-lbl">Pesos por segundo</div>
+      <div class="ticker-val-pesos" id="tick-pesos-s">$0.0000000</div>
+    </div>
+    <div class="ticker-col">
+      <div class="ticker-lbl">kW instantáneo</div>
+      <div class="ticker-val-pesos" id="tick-kw">0.000 kW</div>
+    </div>
+  </div>
+
+  <!-- PROGRESS TIER BAR -->
+  <div class="progress-panel">
+    <div class="progress-header">
+      <div class="section-title" style="margin-bottom:0;">
+        <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Avance por Bloques Tarifarios (Bimestral)
+      </div>
+      <div class="progress-pct" id="pct-total">--%</div>
+    </div>
+    <div class="tier-bar" id="tier-bar">
+      <div class="tier-seg tier-basic"  id="seg-basic"  style="width:0%">BÁS</div>
+      <div class="tier-seg tier-inter"  id="seg-inter"  style="width:0%"></div>
+      <div class="tier-seg tier-excess" id="seg-excess" style="width:0%"></div>
+      <div class="tier-seg tier-remain" id="seg-remain" style="width:100%"></div>
+    </div>
+    <div class="tier-labels">
+      <span><div class="dot" style="background:var(--cfe-green)"></div> Básico 0–150 kWh (<span id="leg-basico">$1.125</span>)</span>
+      <span><div class="dot" style="background:var(--amber)"></div> Intermedio 150–280 kWh (<span id="leg-inter">$1.369</span>)</span>
+      <span><div class="dot" style="background:var(--red)"></div> Excedente &gt;280 kWh (<span id="leg-excedente">$2.859</span>)</span>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card green">
+      <div class="stat-lbl">Consumo registrado</div>
+      <div class="stat-val" id="s-kwh">36.70</div>
+      <div class="stat-sub">kWh acumulados</div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-lbl">Promedio diario</div>
+      <div class="stat-val" id="s-avg">--</div>
+      <div class="stat-sub">kWh/día</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-lbl">Velocidad actual</div>
+      <div class="stat-val" id="s-rate">--</div>
+      <div class="stat-sub">kWh/hora</div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-lbl">Media últ. 3 períodos</div>
+      <div class="stat-val" id="s-apoyo">$--</div>
+      <div class="stat-sub">referencia histórica</div>
+    </div>
+  </div>
+
+  <!-- PREDICTION PANEL -->
+  <div class="pred-panel">
+    <div class="section-title" style="color:var(--amber);">
+      <svg class="icon" viewBox="0 0 24 24" style="color:var(--amber);"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      Proyección Estadística al Final del Período
+    </div>
+    <div class="pred-grid">
+      <div class="pred-item">
+        <div class="pred-item-lbl">kWh proyectados</div>
+        <div class="pred-item-val" id="p-kwh" style="color:var(--cfe-deep)">--</div>
+        <div class="pred-item-sub">al cierre del bimestre</div>
+      </div>
+      <div class="pred-item">
+        <div class="pred-item-lbl">Proyección puntual</div>
+        <div class="pred-item-val" id="p-pesos" style="color:var(--amber)">$--</div>
+        <div class="pred-item-sub">basada en tu tasa calibrada</div>
+      </div>
+      <div class="pred-item">
+        <div class="pred-item-lbl">Estimado final ponderado</div>
+        <div class="pred-item-val" id="p-neto" style="color:var(--cfe-dark)">$--</div>
+        <div class="pred-item-sub">60% puntual + 40% histórico</div>
+      </div>
+      <div class="pred-item">
+        <div class="pred-item-lbl">Rango de confianza</div>
+        <div class="pred-item-val" id="p-range" style="color:var(--muted); font-size:13px">-- / --</div>
+        <div class="pred-item-sub">escenario bajo / alto (±1σ)</div>
+      </div>
+      <div class="pred-item">
+        <div class="pred-item-lbl">Días restantes</div>
+        <div class="pred-item-val" id="p-dias" style="color:var(--blue)">--</div>
+        <div class="pred-item-sub">para cierre de período</div>
+      </div>
+      <div class="pred-item">
+        <div class="pred-item-lbl">% del límite bimestral</div>
+        <div class="pred-item-val" id="p-pct-limit" style="color:var(--amber)">--%</div>
+        <div class="pred-item-sub">vs 280 kWh (intermedio)</div>
+      </div>
+    </div>
+    <div style="margin-top:16px; border-top:1px solid var(--border); padding-top:14px;">
+      <div style="font-size:9px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:9px;">Bandas de Confianza Estadística</div>
+      <div class="conf-row">
+        <div class="conf-lbl">Escenario óptimo</div>
+        <div class="conf-bar-wrap"><div class="conf-bar" id="cb-opt" style="width:0%"></div></div>
+        <div class="conf-val" id="cv-opt">$--</div>
+      </div>
+      <div class="conf-row">
+        <div class="conf-lbl">Media proyectada</div>
+        <div class="conf-bar-wrap"><div class="conf-bar" id="cb-med" style="width:0%"></div></div>
+        <div class="conf-val" id="cv-med">$--</div>
+      </div>
+      <div class="conf-row">
+        <div class="conf-lbl">Escenario alto</div>
+        <div class="conf-bar-wrap"><div class="conf-bar" id="cb-hi"  style="width:0%"></div></div>
+        <div class="conf-val" id="cv-hi">$--</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LECTURAS REALES HISTORY -->
+  <div class="lecturas-panel">
+    <div class="section-title">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Historial de Lecturas Reales
+    </div>
+    <table class="lecturas-table">
+      <thead>
+        <tr>
+          <th>Fecha / hora</th>
+          <th>Total acumulado (ref.)</th>
+          <th>Consumo período</th>
+          <th>Origen</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="lecturas-body"></tbody>
+    </table>
+    <div class="lecturas-empty" id="lecturas-empty" style="display:none;">Aún no hay lecturas registradas.</div>
+  </div>
+
+  <!-- HISTÓRICO -->
+  <div class="hist-panel">
+    <div class="section-title">
+      <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Histórico de Consumo (kWh por período)
+    </div>
+    <div class="hist-bars" id="hist-bars"><!-- JS fills --></div>
+    <div class="hist-foot">Tarifa doméstica · bimestral · León, Gto · datos reales del recibo</div>
+  </div>
+
+  <!-- TARIFA TABLE -->
+  <div class="tarifa-panel">
+    <div class="section-title">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M20.59 13.41L13.42 20.58a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+      Tabla de Tarifas Aplicables (Tarifa 01)
+    </div>
+    <div class="tarifa-row">
+      <span class="tarifa-tier-badge badge-basic">Básico</span>
+      <span class="tarifa-kwh">0 – 150 kWh</span>
+      <span class="tarifa-price" id="tp-basico">$1.125 / kWh</span>
+    </div>
+    <div class="tarifa-row">
+      <span class="tarifa-tier-badge badge-inter">Intermedio</span>
+      <span class="tarifa-kwh">151 – 280 kWh</span>
+      <span class="tarifa-price" id="tp-inter">$1.369 / kWh</span>
+    </div>
+    <div class="tarifa-row">
+      <span class="tarifa-tier-badge badge-excess">Excedente</span>
+      <span class="tarifa-kwh">> 280 kWh</span>
+      <span class="tarifa-price" id="tp-excedente">$2.859 / kWh</span>
+    </div>
+    <div class="tarifa-row">
+      <span style="font-size:10px; color:var(--muted)">DAP (Alumbrado Público)</span>
+      <span class="tarifa-kwh">fijo</span>
+      <span class="tarifa-price" id="tp-dap">$33.39</span>
+    </div>
+    <div class="tarifa-row">
+      <span style="font-size:10px; color:var(--muted)">IVA</span>
+      <span class="tarifa-kwh">sobre subtotal</span>
+      <span class="tarifa-price">16%</span>
+    </div>
+  </div>
+
+  <!-- INSTALAR APP (PWA) -->
+  <div class="tarifa-panel" id="panel-instalar-app" style="display:none;">
+    <div class="section-title">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Instalar app
+    </div>
+    <p class="hist-foot" style="margin:0 0 12px;">Ábrela desde la pantalla de inicio de tu celular, como una app — sin pasar por el navegador.</p>
+    <button type="button" class="ob-btn ob-btn-primary" id="btn-instalar-app" style="width:100%;">Instalar app</button>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  Monitor CFE en tiempo real · <span id="ftr-nombre">Titular del servicio</span> · <span id="ftr-ciudad">León, Gto</span> · <span id="ftr-tarifa">Tarifa 01 doméstica</span>
+</footer>
+</div><!-- /cfe-app-root -->
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   MOTOR PRINCIPAL — recibe los datos reales del recibo (RECIBO),
+   ya confirmados en el onboarding, y arranca todo el monitor.
+   Todo lo que antes eran constantes fijas de UN recibo específico
+   ahora proviene de RECIBO, para que funcione con el recibo de
+   cualquier usuario.
+   ═══════════════════════════════════════════════════════════ */
+function iniciarAppPrincipal(RECIBO, SERVICIO_ID) {
+
+/* Histórico de bimestres anteriores, tal como viene del recibo (o editado a mano) */
+const HIST = RECIBO.hist.map(h => ({ per: h.per, kwh: h.kwh, pago: h.pago }));
+
+// Período ANTERIOR cerrado (el que aparece facturado en el recibo subido)
+const ANT_KWH          = RECIBO.kwhPeriodo;
+const ANT_ENERGIA_NETA = RECIBO.importeEnergia;
+const ANT_DAP          = RECIBO.dap;
+const ANT_TOTAL_PAGO   = RECIBO.totalPagar;
+// Tarifa promedio del bimestre anterior. Ya NO se usa para calcular el
+// costo del período actual (eso ahora se hace por bloques reales en
+// energiaEscalonada/costoNeto); se conserva solo como dato de referencia.
+const PRECIO_EFECTIVO_KWH = ANT_ENERGIA_NETA / ANT_KWH;
+
+// Período ACTUAL (arranca justo después del período facturado en el recibo)
+const INICIO_PERIODO  = new Date(RECIBO.inicioPeriodoActual);
+const INICIO_MS       = INICIO_PERIODO.getTime();
+const PERIODO_DIAS    = RECIBO.diasPeriodo;
+const LECTURA_MEDIDOR = RECIBO.lecturaActual; // kWh en medidor al iniciar período
+
+// Lecturas reales: arranca con la lectura inicial capturada en el onboarding
+const SEED_LECTURAS = RECIBO.seedLecturas;
+
+// Tarifas CFE Tarifa 01 doméstica, tomadas del recibo cuando están disponibles
+const T_BASICO = RECIBO.tBasico;
+const T_INTER  = RECIBO.tIntermedio;
+const T_EXCESS = RECIBO.tExcedente;
+const DAP      = RECIBO.dap;
+const IVA      = 0.16;
+
+/* ═══════════════════════════════════════════════════════════
+   ALMACENAMIENTO DE LECTURAS REALES (localStorage)
+   ═══════════════════════════════════════════════════════════ */
+const LECTURAS_KEY = 'cfe_lecturas_reales_v2_' + (SERVICIO_ID || 'default');
+
+function loadLecturas() {
+  try {
+    const raw = localStorage.getItem(LECTURAS_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) { return []; }
+}
+function saveLecturas(arr) {
+  try { localStorage.setItem(LECTURAS_KEY, JSON.stringify(arr)); } catch (e) {}
+}
+function nuevoId() { return 'r' + Date.now() + Math.floor(Math.random() * 1000); }
+
+let lecturas = loadLecturas();
+
+// Semilla: si no hay lecturas guardadas, se cargan las lecturas reales
+// tomadas al arrancar este monitor, fijando su fecha/hora para siempre.
+if (lecturas.length === 0) {
+  lecturas = SEED_LECTURAS.map(s => ({
+    id: nuevoId(),
+    ts: s.ts,
+    medidor: s.medidor,
+    kwh: s.medidor - LECTURA_MEDIDOR,
+    origen: s.origen
+  }));
+  saveLecturas(lecturas);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ESTADÍSTICA HISTÓRICA — todos los períodos representativos
+   ═══════════════════════════════════════════════════════════ */
+const histRep   = HIST.filter(h => h.kwh > 30);
+const histPagos = histRep.map(h => h.pago);
+const nHist     = histPagos.length;
+
+const mediaHist = histPagos.reduce((a,b)=>a+b) / nHist;
+// Desviación estándar muestral de TODO el histórico representativo (no solo
+// los últimos 3): es el "prior" bayesiano de cuánto varía tu pago de bimestre
+// a bimestre en condiciones normales.
+const sdHist = nHist > 1
+  ? Math.sqrt(histPagos.reduce((a,b)=>a+(b-mediaHist)**2,0) / (nHist - 1))
+  : mediaHist * 0.15; // sin histórico suficiente, se asume ~15% de variación
+
+const ult3Pagos = histPagos.slice(0,3);
+const mediaUlt3 = ult3Pagos.reduce((a,b)=>a+b) / Math.max(1, ult3Pagos.length);
+const sdUlt3    = Math.sqrt(ult3Pagos.reduce((a,b)=>a+(b-mediaUlt3)**2,0) / Math.max(1, ult3Pagos.length));
+
+// Tasa de respaldo puramente estadística, basada en el promedio de kWh
+// de tus últimos períodos reales (histRep) repartido entre los días del
+// período. Se usa cuando hay poca o ninguna calibración real disponible,
+// para que el "en vivo" nunca se quede congelado en 0.
+const histKwhRep    = histRep.map(h => h.kwh);
+const mediaKwhHist  = histKwhRep.reduce((a,b)=>a+b, 0) / histKwhRep.length;
+const TASA_HIST_KWH_SEG = (mediaKwhHist / PERIODO_DIAS) / 86400;
+
+/* ═══════════════════════════════════════════════════════════
+   TASA DE CONSUMO — regresión lineal PONDERADA por recencia
+   sobre lecturas reales, forzada por el origen (INICIO_PERIODO, 0 kWh)
+
+   tasa = Σ(wi·xi·yi) / Σ(wi·xi²)   xi = segs desde inicio, yi = kWh
+
+   Los puntos más recientes pesan más (semivida de 4 días), para que la
+   tasa reaccione a cómo te has comportado EN LOS DÍAS ACTIVOS QUE VAN
+   en vez de diluir un cambio reciente con lecturas viejas del inicio del
+   período. Además se calcula el error estándar de la pendiente para
+   cuantificar la incertidumbre real de esa tasa (no un peso arbitrario fijo).
+   ═══════════════════════════════════════════════════════════ */
+function segsDesdeInicio(fechaMs) { return (fechaMs - INICIO_MS) / 1000; }
+
+const SEMIVIDA_SEG = 4 * 86400; // 4 días
+
+function calcularTasaPonderada(pts, ahoraMs) {
+  const validos = pts
+    .map(l => ({ xi: segsDesdeInicio(new Date(l.ts).getTime()), yi: l.kwh, ts: l.ts }))
+    .filter(p => p.xi > 0);
+  const n = validos.length;
+  if (n === 0) return { slope: null, se: null, n: 0 };
+
+  validos.forEach(p => {
+    const antigSeg = Math.max(0, (ahoraMs - new Date(p.ts).getTime()) / 1000);
+    p.w = Math.pow(0.5, antigSeg / SEMIVIDA_SEG);
+  });
+
+  const sumWXY = validos.reduce((a,p) => a + p.w * p.xi * p.yi, 0);
+  const sumWXX = validos.reduce((a,p) => a + p.w * p.xi * p.xi, 0);
+  if (sumWXX === 0) return { slope: null, se: null, n };
+  const slope = sumWXY / sumWXX;
+
+  // Error estándar de la pendiente (regresión ponderada forzada al origen):
+  // captura qué tan dispersos están los residuos reales respecto a la
+  // recta, y por tanto qué tan confiable es proyectar con esa tasa.
+  let sumWResid2 = 0;
+  validos.forEach(p => {
+    const resid = p.yi - slope * p.xi;
+    sumWResid2 += p.w * resid * resid;
+  });
+  const gl = Math.max(1, n - 1);
+  const varianzaResid = sumWResid2 / gl;
+  const se = n >= 2 ? Math.sqrt(varianzaResid / sumWXX) : null;
+
+  return { slope, se, n };
+}
+
+// Perfil día-hábil vs fin de semana: si hay suficientes intervalos entre
+// lecturas consecutivas de cada tipo, se estima el ritmo (kWh/día) propio
+// de días hábiles y de fines de semana, para repartir los días que faltan
+// según qué tipo de día son (y no asumir que todos consumen igual).
+function calcularPerfilSemana(pts) {
+  const ordenados = [...pts].sort((a,b) => new Date(a.ts) - new Date(b.ts));
+  const acumHabil = { kwh: 0, dias: 0 }, acumFin = { kwh: 0, dias: 0 };
+  for (let i = 1; i < ordenados.length; i++) {
+    const a = ordenados[i-1], b = ordenados[i];
+    const dKwh  = b.kwh - a.kwh;
+    const dDias = (new Date(b.ts) - new Date(a.ts)) / 86400000;
+    if (dKwh <= 0 || dDias <= 0) continue;
+    const diaSemana = new Date(a.ts).getDay(); // 0=Dom..6=Sáb
+    const esFin = (diaSemana === 0 || diaSemana === 6);
+    const bucket = esFin ? acumFin : acumHabil;
+    bucket.kwh  += dKwh;
+    bucket.dias += dDias;
+  }
+  const ritmoHabil = acumHabil.dias >= 1 ? acumHabil.kwh / acumHabil.dias : null;
+  const ritmoFin   = acumFin.dias   >= 1 ? acumFin.kwh   / acumFin.dias   : null;
+  return { ritmoHabil, ritmoFin, valido: ritmoHabil !== null && ritmoFin !== null };
+}
+
+const TASA = { kwhPorSeg: 0, wattsProm: 0, anchorMs: INICIO_MS, anchorKwh: 0, pesoMedida: 0, puntos: 0, se: null };
+let PERFIL_SEMANA = { ritmoHabil: null, ritmoFin: null, valido: false };
+let INTERVALO_CONF = { bajo: null, alto: null };
+
+function ultimaLectura() {
+  return [...lecturas].sort((a,b) => new Date(b.ts) - new Date(a.ts))[0];
+}
+
+function recalcTasa() {
+  const ahoraMs = Date.now();
+  const { slope, se, n } = calcularTasaPonderada(lecturas, ahoraMs);
+  const tasaMedida = (slope && slope > 0) ? slope : null;
+
+  // Combinación bayesiana por precisión (inverso de la varianza) entre la
+  // tasa medida y la tasa histórica de respaldo, en vez de un peso fijo
+  // arbitrario. Cuantas más lecturas y más consistentes sean entre sí
+  // (menor error estándar), más precisión tiene la tasa medida y más pesa
+  // frente al prior histórico — esto emerge de los datos, no se impone.
+  let pesoMedida = 0;
+  if (tasaMedida && se && se > 0) {
+    const sdHistKwhSeg = Math.max(TASA_HIST_KWH_SEG * 0.25, 1e-9);
+    const precMedida = 1 / (se * se);
+    const precHist    = 1 / (sdHistKwhSeg * sdHistKwhSeg);
+    pesoMedida = Math.min(0.97, precMedida / (precMedida + precHist));
+  } else if (tasaMedida) {
+    pesoMedida = Math.min(0.7, 0.35 * n);
+  }
+
+  TASA.kwhPorSeg = tasaMedida
+    ? (pesoMedida * tasaMedida + (1 - pesoMedida) * TASA_HIST_KWH_SEG)
+    : TASA_HIST_KWH_SEG;
+  TASA.kwhPorSeg = Math.max(TASA.kwhPorSeg, 0.0000001);
+  TASA.wattsProm = TASA.kwhPorSeg * 3_600_000;
+  TASA.pesoMedida = pesoMedida;
+  TASA.puntos = n;
+  TASA.se = se;
+
+  const ultima = ultimaLectura();
+  TASA.anchorMs  = ultima ? new Date(ultima.ts).getTime() : INICIO_MS;
+  TASA.anchorKwh = ultima ? ultima.kwh : 0;
+
+  PERFIL_SEMANA = calcularPerfilSemana(lecturas);
+  INTERVALO_CONF = simularIntervaloConfianza();
+}
+recalcTasa();
+
+/* ═══════════════════════════════════════════════════════════
+   FUNCIONES DE COSTO
+   ═══════════════════════════════════════════════════════════ */
+// Energía por bloques tarifarios acumulados (CFE Tarifa 01 doméstica):
+// los primeros 150 kWh al precio básico, los siguientes 130 (151-280) al
+// intermedio, y todo lo que exceda 280 al precio de excedente.
+function energiaEscalonada(kwh) {
+  if (kwh <= 0) return 0;
+  const basico  = Math.min(kwh, 150);
+  const inter   = Math.max(0, Math.min(kwh, 280) - 150);
+  const excess  = Math.max(0, kwh - 280);
+  return basico * T_BASICO + inter * T_INTER + excess * T_EXCESS;
+}
+function costoNeto(kwh) {
+  if (kwh <= 0) return 0;
+  const energia = energiaEscalonada(kwh);
+  return (energia + DAP) * (1 + IVA);
+}
+function precioBloque(kwh) {
+  if (kwh > 280) return T_EXCESS;
+  if (kwh > 150) return T_INTER;
+  return T_BASICO;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PROYECCIÓN DE kWh RESTANTES — usando el perfil hábil/fin de
+   semana cuando hay datos suficientes, en vez de un ritmo plano
+   ═══════════════════════════════════════════════════════════ */
+function kwhRestantesProyectados(diasRest, desdeMs) {
+  if (diasRest <= 0) return 0;
+
+  if (!PERFIL_SEMANA.valido) {
+    return TASA.kwhPorSeg * diasRest * 86400;
+  }
+
+  // Se cuentan, día por día, cuántos de los días restantes caen en fin de
+  // semana y cuántos en día hábil, y se aplica el ritmo observado de cada
+  // tipo. El último día (fraccional) se prorratea.
+  let kwh = 0;
+  let cursor = new Date(desdeMs);
+  let diasPend = diasRest;
+  while (diasPend > 0) {
+    const frac = Math.min(1, diasPend);
+    const dow = cursor.getDay();
+    const esFin = (dow === 0 || dow === 6);
+    kwh += (esFin ? PERFIL_SEMANA.ritmoFin : PERFIL_SEMANA.ritmoHabil) * frac;
+    cursor = new Date(cursor.getTime() + 86400000);
+    diasPend -= 1;
+  }
+  return kwh;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PROYECCIÓN — estimado puntual usando la tasa bayesiana
+   (calibrada + prior histórico) con perfil hábil/fin de semana.
+   El intervalo de confianza (bajo/alto) se calcula aparte, por
+   simulación Monte Carlo, y se recicla entre ticks.
+   ═══════════════════════════════════════════════════════════ */
+function calcularProyeccion(kwhAcum, diasAcum, ahoraMs) {
+  const diasRest   = Math.max(0, PERIODO_DIAS - diasAcum);
+  const kwhRestant = kwhRestantesProyectados(diasRest, ahoraMs || Date.now());
+  const kwhFinal   = kwhAcum + kwhRestant;
+  const costoPuntual = costoNeto(kwhFinal);
+
+  // Posterior bayesiano (normal-normal) entre el costo proyectado por tasa
+  // medida (observación) y el promedio histórico de pagos (prior), ponderado
+  // por precisión real: entre más avanzado el período y más consistentes
+  // tus lecturas, más pesa la observación en vez de un 60/40 fijo.
+  const fraccionAvance = Math.min(1, diasAcum / PERIODO_DIAS);
+  const seCosto = estimarErrorCosto(diasRest, ahoraMs || Date.now());
+  const varObs  = seCosto ? seCosto * seCosto : (sdHist * sdHist) / Math.max(0.05, fraccionAvance);
+  const varPrior = sdHist * sdHist;
+  const precObs   = 1 / Math.max(varObs, 1e-6);
+  const precPrior = 1 / Math.max(varPrior, 1e-6);
+  const proyPond = (costoPuntual * precObs + mediaHist * precPrior) / (precObs + precPrior);
+
+  const bajo = (INTERVALO_CONF.bajo != null) ? INTERVALO_CONF.bajo : Math.max(0, proyPond - sdUlt3);
+  const alto = (INTERVALO_CONF.alto != null) ? INTERVALO_CONF.alto : proyPond + sdUlt3;
+
+  return { kwhFinal, costoPuntual, proyPond, bajo, alto };
+}
+
+// Propagación de error (método delta) de la tasa medida hacia el costo
+// final: si la tasa de consumo tiene un error estándar `se` (kWh/seg), ese
+// error se traduce a pesos multiplicando por los días restantes y por el
+// precio marginal del bloque tarifario donde caería el consumo.
+function estimarErrorCosto(diasRest, ahoraMs) {
+  if (!TASA.se || diasRest <= 0) return null;
+  const kwhRestantAprox = TASA.kwhPorSeg * diasRest * 86400;
+  const precioMarginal  = precioBloque(kwhRestantAprox) * (1 + IVA);
+  const segsRest = diasRest * 86400;
+  return TASA.se * segsRest * precioMarginal;
+}
+
+// Simulación Monte Carlo (N corridas) para el intervalo de confianza del
+// pago final: en cada corrida se muestrea una tasa de consumo distinta
+// (Normal, centrada en la tasa bayesiana con la dispersión del error
+// estándar de la regresión) y un "choque" de bimestre completo tomado del
+// histórico real (Normal con media 0 y sd = sdHist, para capturar factores
+// que no ve la tasa diaria: clima, visitas, aparatos nuevos, etc.). Se
+// recalcula solo cuando cambian las lecturas (no en cada tick) por costo
+// computacional.
+function muestraNormal(media, sd) {
+  if (!sd || sd <= 0) return media;
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  const z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  return media + z * sd;
+}
+
+function simularIntervaloConfianza(nSim) {
+  nSim = nSim || 1500;
+  const ahoraMs   = Date.now();
+  const segsTotal = (ahoraMs - INICIO_MS) / 1000;
+  const diasAcum  = Math.max(0, segsTotal / 86400);
+  const diasRest  = Math.max(0, PERIODO_DIAS - diasAcum);
+  const kwhAcum   = TASA.anchorKwh + TASA.kwhPorSeg * Math.max(0, (ahoraMs - TASA.anchorMs) / 1000);
+
+  if (diasRest <= 0) {
+    const c = costoNeto(kwhAcum);
+    return { bajo: c, alto: c };
+  }
+
+  const sdTasa = TASA.se || (TASA.kwhPorSeg * 0.35); // sin SE calculable, ~35% de incertidumbre
+  const resultados = [];
+  for (let i = 0; i < nSim; i++) {
+    const tasaSim = Math.max(0, muestraNormal(TASA.kwhPorSeg, sdTasa));
+    const kwhFinalSim = kwhAcum + tasaSim * diasRest * 86400;
+    const costoBaseSim = costoNeto(kwhFinalSim);
+    // Choque histórico: variabilidad bimestre-a-bimestre no explicada por
+    // el ritmo diario (visitas, clima atípico, aparatos nuevos), escalado
+    // por cuánto del período aún puede "sorprender" (queda por vivirse).
+    const choqueSim = muestraNormal(0, sdHist) * (diasRest / PERIODO_DIAS);
+    resultados.push(Math.max(0, costoBaseSim + choqueSim));
+  }
+  resultados.sort((a,b) => a-b);
+  const p10 = resultados[Math.floor(nSim * 0.10)];
+  const p90 = resultados[Math.floor(nSim * 0.90)];
+  return { bajo: p10, alto: p90 };
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER HISTÓRICO DE PERÍODOS PASADOS
+   ═══════════════════════════════════════════════════════════ */
+function renderHist() {
+  const maxKwh = Math.max(...HIST.map(h=>h.kwh));
+  const wrap   = document.getElementById('hist-bars');
+  wrap.innerHTML = HIST.map(h => {
+    const alturaPx = Math.max(3, (h.kwh / maxKwh) * 55);
+    let color = 'var(--cfe-green)';
+    if (h.kwh > 280) color = 'var(--red)';
+    else if (h.kwh > 150) color = 'var(--amber)';
+    const periodo = h.per.replace('–',' ');
+    return `<div class="hist-bar-wrap">
+      <div class="hist-bar-val">${h.kwh}</div>
+      <div class="hist-bar" style="height:${alturaPx}px;background:${color};"></div>
+      <div class="hist-bar-lbl">${periodo.split(' ')[0]}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER HISTORIAL DE LECTURAS REALES
+   ═══════════════════════════════════════════════════════════ */
+function fmtFechaHora(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'2-digit'}) + ' · ' +
+         d.toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit',hour12:false});
+}
+
+let editingId = null;
+
+const ICON_EDIT  = '<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
+const ICON_TRASH = '<svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>';
+const ICON_CHECK = '<svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+const ICON_X     = '<svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
+function renderLecturas() {
+  const tbody = document.getElementById('lecturas-body');
+  const empty = document.getElementById('lecturas-empty');
+  const sorted = [...lecturas].sort((a,b) => new Date(b.ts) - new Date(a.ts));
+
+  if (sorted.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    tbody.innerHTML = sorted.map(l => {
+      if (l.id === editingId) {
+        return `<tr>
+          <td><input type="datetime-local" class="edit-input" id="edit-fecha-${l.id}" value="${toLocalInputValue(new Date(l.ts))}"></td>
+          <td colspan="2"><input type="number" step="0.0001" class="edit-input" id="edit-medidor-${l.id}" value="${l.medidor}"></td>
+          <td colspan="2" style="white-space:nowrap;">
+            <button class="btn-icon btn-icon-ok" onclick="guardarEdicion('${l.id}')" title="Guardar cambios">${ICON_CHECK}</button>
+            <button class="btn-icon" onclick="cancelarEdicion()" title="Cancelar">${ICON_X}</button>
+          </td>
+        </tr>`;
+      }
+      const badgeClass = l.origen === 'manual' ? 'badge-manual' : 'badge-inicial';
+      const badgeText  = l.origen === 'manual' ? 'Manual' : 'Inicial';
+      return `<tr>
+        <td>${fmtFechaHora(l.ts)}</td>
+        <td>${fmt(l.medidor, 2)} kWh</td>
+        <td>${fmt(l.kwh, 2)} kWh</td>
+        <td><span class="badge-origen ${badgeClass}">${badgeText}</span></td>
+        <td style="white-space:nowrap;">
+          <button class="btn-icon" onclick="iniciarEdicion('${l.id}')" title="Editar lectura">${ICON_EDIT}</button>
+          <button class="btn-icon" onclick="eliminarLectura('${l.id}')" title="Eliminar lectura">${ICON_TRASH}</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  document.getElementById('chip-lecturas').textContent = lecturas.length;
+
+  const ultima = [...lecturas].sort((a,b) => new Date(b.ts) - new Date(a.ts))[0];
+  document.getElementById('calib-ultima').textContent = ultima ? fmtFechaHora(ultima.ts) : '--';
+  document.getElementById('calib-tasa').textContent = fmt(TASA.kwhPorSeg * 86400, 3);
+  document.getElementById('calib-metodo').textContent = TASA.puntos === 0
+    ? 'estadístico (sin calibraciones válidas aún)'
+    : `${Math.round(TASA.pesoMedida*100)}% medido (${TASA.puntos} pt${TASA.puntos>1?'s':''}) + ${Math.round((1-TASA.pesoMedida)*100)}% histórico`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   VALIDACIÓN DE LECTURAS RAZONABLES
+   - Un medidor jamás retrocede: la nueva lectura no puede ser
+     menor a una lectura anterior ni mayor a una posterior ya
+     registrada.
+   - Límite físico: si la tasa implícita respecto a la lectura
+     vecina más cercana supera ~12 kW promedio sostenido (más
+     que el total contratado típico de una casa), se rechaza
+     por ser casi siempre un error de captura (falta/sobra un
+     dígito o el punto decimal).
+   ═══════════════════════════════════════════════════════════ */
+const KW_MAX_RAZONABLE = 12;
+
+function validarLecturaRazonable(medidorVal, fechaMs, excludeId) {
+  const otras = lecturas
+    .filter(l => l.id !== excludeId)
+    .map(l => ({ ...l, tms: new Date(l.ts).getTime() }))
+    .sort((a, b) => a.tms - b.tms);
+
+  let prev = null, next = null;
+  for (const l of otras) {
+    if (l.tms <= fechaMs) prev = l; else { next = l; break; }
+  }
+
+  if (prev && medidorVal < prev.medidor - 0.005) {
+    return { ok:false, msg:'Un medidor eléctrico nunca retrocede: esta lectura (' + fmt(medidorVal,2) + ' kWh) es menor a una lectura anterior ya registrada (' + fmt(prev.medidor,2) + ' kWh, ' + fmtFechaHora(prev.ts) + ').' };
+  }
+  if (next && medidorVal > next.medidor + 0.005) {
+    return { ok:false, msg:'Esta lectura (' + fmt(medidorVal,2) + ' kWh) es mayor a una lectura posterior ya registrada (' + fmt(next.medidor,2) + ' kWh, ' + fmtFechaHora(next.ts) + '). Revisa la fecha/hora o el valor.' };
+  }
+
+  const ref = prev || next;
+  if (ref) {
+    const horas = Math.abs(fechaMs - ref.tms) / 3_600_000;
+    if (horas > 0.0167) { // evita división por intervalos casi nulos
+      const deltaKwh = Math.abs(medidorVal - ref.medidor);
+      const kwProm = deltaKwh / horas;
+      if (kwProm > KW_MAX_RAZONABLE) {
+        return { ok:false, msg:'Esta lectura implica ' + fmt(kwProm,1) + ' kW promedio respecto a la lectura del ' + fmtFechaHora(ref.ts) + ' (' + fmt(ref.medidor,2) + ' kWh) — físicamente improbable en una vivienda. Revisa si falta o sobra un dígito o el punto decimal (ej. 3670.00 vs 3666.70).' };
+      }
+    }
+  }
+  return { ok:true };
+}
+
+function eliminarLectura(id) {
+  if (lecturas.length <= 1) {
+    mostrarMensaje('Debe conservar al menos una lectura para mantener el cálculo activo.', 'error');
+    return;
+  }
+  lecturas = lecturas.filter(l => l.id !== id);
+  saveLecturas(lecturas);
+  recalcTasa();
+  renderLecturas();
+  tick();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FORMULARIO DE CAPTURA
+   ═══════════════════════════════════════════════════════════ */
+function toLocalInputValue(d) {
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function nowLocalInputValue() { return toLocalInputValue(new Date()); }
+
+function iniciarEdicion(id) {
+  editingId = id;
+  renderLecturas();
+}
+
+function cancelarEdicion() {
+  editingId = null;
+  renderLecturas();
+}
+
+function guardarEdicion(id) {
+  const medidorVal = parseFloat(document.getElementById('edit-medidor-' + id).value);
+  const fechaVal    = document.getElementById('edit-fecha-' + id).value;
+
+  if (isNaN(medidorVal)) {
+    mostrarMensaje('Escribe un número válido: el total acumulado que marca el medidor.', 'error');
+    return;
+  }
+  if (medidorVal < LECTURA_MEDIDOR - 0.005) {
+    mostrarMensaje('Esta lectura (' + fmt(medidorVal,2) + ' kWh) es menor a la lectura inicial de tu recibo (' + fmt(LECTURA_MEDIDOR,2) + ' kWh).', 'error');
+    return;
+  }
+  const periodoVal = medidorVal - LECTURA_MEDIDOR;
+
+  const fecha = new Date(fechaVal);
+  const ahora = new Date();
+  if (isNaN(fecha.getTime()) || fecha < INICIO_PERIODO || fecha > ahora) {
+    mostrarMensaje('La fecha debe estar dentro del período actual y no ser futura.', 'error');
+    return;
+  }
+
+  const chk = validarLecturaRazonable(medidorVal, fecha.getTime(), id);
+  if (!chk.ok) {
+    mostrarMensaje(chk.msg, 'error');
+    return;
+  }
+
+  const l = lecturas.find(x => x.id === id);
+  if (l) {
+    l.ts = fecha.toISOString();
+    l.medidor = medidorVal;
+    l.kwh = periodoVal;
+  }
+  saveLecturas(lecturas);
+  editingId = null;
+  recalcTasa();
+  renderLecturas();
+  tick();
+  mostrarMensaje('Lectura actualizada. Tasa de consumo recalculada.', 'success');
+}
+
+function mostrarMensaje(texto, tipo) {
+  const el = document.getElementById('form-msg');
+  el.className = 'form-msg show ' + tipo;
+  const icon = tipo === 'success'
+    ? '<svg class="icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+    : '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+  el.innerHTML = icon + '<span>' + texto + '</span>';
+  clearTimeout(window._msgTimeout);
+  window._msgTimeout = setTimeout(() => { el.classList.remove('show'); }, 5000);
+}
+
+document.getElementById('input-fecha').value = nowLocalInputValue();
+
+// El campo de fecha/hora sigue la hora real en vivo por defecto.
+// En cuanto el usuario lo toca a mano, deja de auto-actualizarse
+// hasta el siguiente registro exitoso.
+let fechaAutoLive = true;
+const inputFechaEl = document.getElementById('input-fecha');
+inputFechaEl.addEventListener('input', () => { fechaAutoLive = false; });
+
+function actualizarFechaLiveSiAplica() {
+  if (fechaAutoLive && document.activeElement !== inputFechaEl) {
+    inputFechaEl.value = nowLocalInputValue();
+  }
+}
+
+// La lectura del medidor (acumulado) se toma tal cual la escribe la
+// persona — es un número real (miles de kWh), no debe reinterpretarse
+// insertando un punto decimal automático.
+function parsearLecturaMedidor(raw) {
+  return parseFloat(String(raw).trim());
+}
+
+document.getElementById('form-lectura').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const medidorVal = parsearLecturaMedidor(document.getElementById('input-medidor').value);
+  const fechaVal    = document.getElementById('input-fecha').value;
+
+  if (isNaN(medidorVal)) {
+    mostrarMensaje('Escribe un número válido: la lectura tal cual la muestra tu medidor.', 'error');
+    return;
+  }
+  if (medidorVal < LECTURA_MEDIDOR - 0.005) {
+    mostrarMensaje('Esta lectura (' + fmt(medidorVal,2) + ' kWh) es menor a la lectura inicial de tu recibo (' + fmt(LECTURA_MEDIDOR,2) + ' kWh). Verifica que estás escribiendo el número completo que marca tu medidor ahora mismo.', 'error');
+    return;
+  }
+  const periodoVal = medidorVal - LECTURA_MEDIDOR;
+
+  const fecha = new Date(fechaVal);
+  const ahora = new Date();
+  if (isNaN(fecha.getTime()) || fecha < INICIO_PERIODO || fecha > ahora) {
+    mostrarMensaje('La fecha debe estar dentro del período actual y no ser futura.', 'error');
+    return;
+  }
+
+  const chk = validarLecturaRazonable(medidorVal, fecha.getTime(), null);
+  if (!chk.ok) {
+    mostrarMensaje(chk.msg, 'error');
+    return;
+  }
+
+  // Snapshot de lo que el modelo ANTERIOR (antes de esta nueva lectura)
+  // estimaba para este mismo instante — solo para comparar en el
+  // carrusel de datos curiosos, no afecta ningún cálculo real.
+  const estimadoAlMomento = TASA.anchorKwh + TASA.kwhPorSeg * Math.max(0, (fecha.getTime() - TASA.anchorMs) / 1000);
+
+  lecturas.push({
+    id: nuevoId(),
+    ts: fecha.toISOString(),
+    medidor: medidorVal,
+    kwh: periodoVal,
+    origen: 'manual'
+  });
+  saveLecturas(lecturas);
+  recalcTasa();
+  renderLecturas();
+  tick();
+  mostrarComparacionCalibracion(periodoVal, estimadoAlMomento);
+
+  document.getElementById('input-medidor').value = '';
+  fechaAutoLive = true;
+  document.getElementById('input-fecha').value = nowLocalInputValue();
+  mostrarMensaje('Lectura registrada. Tasa de consumo recalculada al instante con este nuevo dato.', 'success');
+});
+
+/* ═══════════════════════════════════════════════════════════
+   FLUCTUACIÓN REALISTA DE WATTS
+   ═══════════════════════════════════════════════════════════ */
+function wattsInstantaneo(t) {
+  const noise = Math.sin(t/47)*0.09 + Math.sin(t/13)*0.05 + Math.sin(t/5.3)*0.025;
+  return Math.max(10, TASA.wattsProm * (1 + noise));
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FORMATO
+   ═══════════════════════════════════════════════════════════ */
+function fmt(n, dec=2)  { return Number(n).toFixed(dec); }
+function fmtMXN(n)      { return '$' + Number(n).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+/* ═══════════════════════════════════════════════════════════
+   NOTIFICACIÓN DE EXCEDENTE — dispara una vez por umbral cruzado
+   (no en cada tick) mientras el usuario tenga el aviso activado
+   y el permiso del navegador concedido. El estado vive en memoria:
+   se vuelve a poder avisar tras recargar la página o iniciar un
+   período nuevo, lo cual es aceptable para un aviso informativo.
+   ═══════════════════════════════════════════════════════════ */
+const _notifExcedenteYaDisparada = { cerca: false, dentro: false };
+function dispararNotifExcedente(tipo, mensaje) {
+  if (_notifExcedenteYaDisparada[tipo]) return;
+  _notifExcedenteYaDisparada[tipo] = true;
+  try {
+    if (localStorage.getItem('cfe_notif_excedente_v1') !== '1') return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    new Notification('CFE Monitor', { body: mensaje, tag: 'cfe-excedente-' + tipo });
+  } catch (e) { /* silencioso: la notificación es un extra, no debe romper el tick */ }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TICK PRINCIPAL — se ejecuta cada 250ms
+   ═══════════════════════════════════════════════════════════ */
+function tick() {
+  const ahora     = Date.now();
+  const t         = ahora / 1000;
+  const segsTotal = (ahora - INICIO_MS) / 1000;
+  const diasAcum  = segsTotal / 86400;
+  const diasRest  = Math.max(0, PERIODO_DIAS - diasAcum);
+
+  const kwhAcum = TASA.anchorKwh + TASA.kwhPorSeg * Math.max(0, (ahora - TASA.anchorMs) / 1000);
+
+  const instW  = wattsInstantaneo(t);
+  const instKW = instW / 1000;
+
+  const costoAcum = costoNeto(kwhAcum);
+  const pesosPS = TASA.kwhPorSeg * precioBloque(kwhAcum) * (1+IVA);
+
+  const { kwhFinal, costoPuntual, proyPond, bajo, alto } = calcularProyeccion(kwhAcum, diasAcum, ahora);
+
+  const pctTiempo = Math.min(100, (diasAcum / PERIODO_DIAS) * 100);
+  const pctLimite = Math.min(150, (kwhAcum / 280) * 100);
+
+  const BASE = 280;
+  const bW = Math.min(kwhAcum, 150) / BASE * 100;
+  const iW = kwhAcum > 150 ? Math.min(kwhAcum - 150, 130) / BASE * 100 : 0;
+  const eW = kwhAcum > 280 ? (kwhAcum - 280) / BASE * 100 : 0;
+  const rW = Math.max(0, 100 - bW - iW - eW);
+
+  document.getElementById('seg-basic').style.width  = bW + '%';
+  document.getElementById('seg-inter').style.width  = iW + '%';
+  document.getElementById('seg-excess').style.width = eW + '%';
+  document.getElementById('seg-remain').style.width = rW + '%';
+  document.getElementById('pct-total').textContent  = fmt(pctTiempo, 1) + '%';
+
+  document.getElementById('main-kwh').textContent   = fmt(kwhAcum, 6);
+  document.getElementById('main-watts').textContent = fmt(instW, 1) + ' W';
+  document.getElementById('main-pesos').textContent = fmtMXN(costoAcum);
+  document.getElementById('main-dias').textContent  = fmt(diasAcum, 2);
+
+  document.getElementById('tick-watts').textContent   = fmt(instW, 2) + ' W';
+  document.getElementById('tick-kw').textContent      = fmt(instKW, 4) + ' kW';
+  document.getElementById('tick-pesos-s').textContent = '$' + pesosPS.toFixed(7);
+
+  document.getElementById('s-kwh').textContent   = fmt(kwhAcum, 4);
+  document.getElementById('s-avg').textContent   = fmt(kwhAcum / Math.max(0.001, diasAcum), 4);
+  document.getElementById('s-rate').textContent  = fmt(instKW, 4);
+  document.getElementById('s-apoyo').textContent = fmtMXN(mediaUlt3);
+
+  document.getElementById('p-kwh').textContent       = fmt(kwhFinal, 1) + ' kWh';
+  document.getElementById('p-pesos').textContent     = fmtMXN(costoPuntual);
+  document.getElementById('p-neto').textContent      = fmtMXN(proyPond);
+  document.getElementById('p-range').textContent     = fmtMXN(bajo) + ' / ' + fmtMXN(alto);
+  document.getElementById('p-dias').textContent      = fmt(diasRest, 1) + ' días';
+  document.getElementById('p-pct-limit').textContent = fmt(pctLimite, 1) + '%';
+
+  const maxBanda = alto * 1.15;
+  document.getElementById('cb-opt').style.width = Math.min(100, bajo    / maxBanda * 100) + '%';
+  document.getElementById('cb-med').style.width = Math.min(100, proyPond / maxBanda * 100) + '%';
+  document.getElementById('cb-hi').style.width  = Math.min(100, alto     / maxBanda * 100) + '%';
+  document.getElementById('cv-opt').textContent = fmtMXN(bajo);
+  document.getElementById('cv-med').textContent = fmtMXN(proyPond);
+  document.getElementById('cv-hi').textContent  = fmtMXN(alto);
+
+  document.getElementById('calib-tasa').textContent = fmt(TASA.kwhPorSeg * 86400, 3);
+
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('es-MX', {hour12:false});
+
+  actualizarFechaLiveSiAplica();
+
+  const UMBRAL_CERCA_EXCEDENTE = 260; // aviso previo, 20 kWh antes del corte real (280)
+  const warnBadge = document.getElementById('warn-badge');
+  if (kwhAcum > 280) {
+    warnBadge.classList.add('show');
+    warnBadge.style.background = 'var(--red-bg)';
+    warnBadge.style.borderColor = 'var(--red-bd)';
+    warnBadge.style.color = 'var(--red)';
+    warnBadge.lastChild.textContent = 'Consumo dentro del bloque de excedente';
+    dispararNotifExcedente('dentro', 'Ya entraste al bloque de excedente: el kWh ahora cuesta casi el triple.');
+  } else if (kwhAcum > 150) {
+    warnBadge.classList.add('show');
+    warnBadge.style.background = 'var(--amber-bg)';
+    warnBadge.style.borderColor = 'var(--amber-bd)';
+    warnBadge.style.color = 'var(--amber)';
+    warnBadge.lastChild.textContent = 'Consumo dentro del bloque intermedio de tarifa';
+    if (kwhAcum > UMBRAL_CERCA_EXCEDENTE) {
+      dispararNotifExcedente('cerca', `Te acercas al excedente: llevas ${fmt(kwhAcum,1)} de 280 kWh.`);
+    }
+  } else {
+    warnBadge.classList.remove('show');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CARRUSEL DE DATOS CURIOSOS — módulo independiente, no toca
+   ninguna lógica de cálculo existente.
+   ═══════════════════════════════════════════════════════════ */
+const DATOS_CURIOSOS = [
+  'Un foco LED de 9W encendido 5 horas al día consume aprox. 1.35 kWh al mes — hasta 85% menos que un foco incandescente equivalente.',
+  'El refrigerador puede representar hasta 25-30% de tu recibo de luz, aunque esté encendido todo el tiempo "en silencio".',
+  'Un router WiFi encendido 24/7 puede sumar aprox. 7-10 kWh al mes, incluso sin que nadie lo note.',
+  'Un minisplit de 1 tonelada puede consumir entre 0.9 y 1.3 kW por hora de uso — una de las cargas más grandes en casa.',
+  'La Tarifa 01 doméstica de CFE tiene 3 bloques: básico (0-150 kWh), intermedio (151-280 kWh) y excedente (>280 kWh). El precio casi se triplica al llegar al excedente.',
+  'El cargo DAP (Derecho de Alumbrado Público) aparece fijo en tu recibo, sin importar cuánta luz consumas.',
+  'Una TV LED de 40" encendida 4 horas diarias consume aprox. 6-9 kWh al mes.',
+  'Un microondas usado 15 min al día consume apenas ~3-4 kWh al mes, mucho menos de lo que la gente cree.',
+  'Una lavadora automática usada 3 veces por semana consume entre 8 y 15 kWh al mes, según el ciclo.',
+  'El consumo promedio de un hogar mexicano ronda entre 150 y 250 kWh por bimestre, según la región y el clima.',
+  'Cambiar solo 5 focos incandescentes por LED puede ahorrar hasta 300-400 kWh al año en una casa.',
+  'Una plancha eléctrica consume entre 1,000 y 1,800 W — 20 minutos de uso equivalen a casi 15 horas de un foco LED encendido.',
+  'Los "consumos fantasma" (aparatos en standby) pueden representar hasta 10% del recibo de luz total de una casa.',
+  'El IVA aplicado al recibo de luz en México es del 16%, igual que en la mayoría de bienes y servicios.',
+  'Una laptop consume hasta 5 veces menos energía que una computadora de escritorio usada las mismas horas.',
+  'El calentador de agua eléctrico puede ser de los aparatos más caros de operar en casa — varios kWh solo para un baño.',
+  '1 kWh equivale a la energía que consume un foco de 100W encendido durante 10 horas seguidas.',
+  'Cargar un celular por completo consume apenas ~0.01-0.02 kWh — necesitarías cargarlo cientos de veces para gastar 1 kWh.',
+];
+
+const DURACION_SLIDE_MS  = 7000;   // cuánto dura cada dato en automático
+const PAUSA_LECTURA_MS   = 20000;  // pausa tras la última interacción manual
+
+let curiosoIdx = -1;
+let curiosoOverride = null;        // { hasta: timestamp } cuando se muestra un aviso de calibración
+let ultimaInteraccionManual = 0;   // timestamp del último swipe del usuario
+let ultimoAvanceAuto = 0;          // timestamp del último cambio automático de slide
+
+function reiniciarBarraCurioso(duracionMs) {
+  const bar = document.getElementById('curioso-bar');
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+  void bar.offsetWidth; // fuerza reflow para reiniciar la animación
+  bar.style.transition = `width ${duracionMs}ms linear`;
+  bar.style.width = '100%';
+}
+
+function pausarBarraCurioso() {
+  const bar = document.getElementById('curioso-bar');
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+}
+
+function pintarCurioso(texto) {
+  const el = document.getElementById('curioso-texto');
+  el.style.opacity = 0;
+  setTimeout(() => {
+    el.textContent = texto;
+    el.style.opacity = 1;
+  }, 220);
+}
+
+// Avance automático (respeta la duración de 7s y la barra de progreso)
+function siguienteDatoCurioso() {
+  curiosoIdx = (curiosoIdx + 1) % DATOS_CURIOSOS.length;
+  pintarCurioso(DATOS_CURIOSOS[curiosoIdx]);
+  reiniciarBarraCurioso(DURACION_SLIDE_MS);
+  ultimoAvanceAuto = Date.now();
+}
+
+// Navegación manual (swipe): delta = 1 (siguiente/derecha) o -1 (anterior/izquierda)
+function irADatoCurioso(delta) {
+  curiosoIdx = (curiosoIdx + delta + DATOS_CURIOSOS.length) % DATOS_CURIOSOS.length;
+  pintarCurioso(DATOS_CURIOSOS[curiosoIdx]);
+
+  // El swipe manual cancela cualquier aviso de calibración en curso
+  if (curiosoOverride) {
+    curiosoOverride = null;
+    document.getElementById('curioso-panel').classList.remove('curioso-alerta','curioso-ahorro','curioso-ok');
+  }
+
+  const ahora = Date.now();
+  ultimaInteraccionManual = ahora;
+  ultimoAvanceAuto = ahora;
+  pausarBarraCurioso(); // mientras el usuario "está leyendo", la barra no avanza
+}
+
+// Revisor central: corre cada 500ms y decide si debe avanzar solo,
+// seguir pausado (usuario leyendo/interactuando), o esperar a que
+// termine un aviso de calibración.
+function cicloCurioso() {
+  const ahora = Date.now();
+
+  if (curiosoOverride) {
+    if (ahora < curiosoOverride.hasta) return; // sigue mostrando el aviso de calibración
+    curiosoOverride = null;
+    document.getElementById('curioso-panel').classList.remove('curioso-alerta','curioso-ahorro','curioso-ok');
+    ultimoAvanceAuto = ahora;
+    reiniciarBarraCurioso(DURACION_SLIDE_MS);
+    return;
+  }
+
+  // Si hubo un swipe hace menos de 20s, se mantiene pausado (el usuario está leyendo)
+  if (ahora - ultimaInteraccionManual < PAUSA_LECTURA_MS) return;
+
+  if (ahora - ultimoAvanceAuto >= DURACION_SLIDE_MS) {
+    siguienteDatoCurioso();
+  }
+}
+
+// Compara una lectura recién registrada contra lo que el modelo
+// estimaba para ese mismo instante justo antes de incorporarla.
+function mostrarComparacionCalibracion(realKwh, estimadoKwh) {
+  const panel = document.getElementById('curioso-panel');
+  const el    = document.getElementById('curioso-texto');
+  const diff  = realKwh - estimadoKwh;
+  const pct   = estimadoKwh > 0.01 ? Math.abs(diff / estimadoKwh * 100) : null;
+
+  panel.classList.remove('curioso-alerta','curioso-ahorro','curioso-ok');
+
+  let msg;
+  if (Math.abs(diff) < 0.05) {
+    panel.classList.add('curioso-ok');
+    msg = '✓ Justo como se esperaba — tu consumo va exactamente en línea con la proyección.';
+  } else if (diff > 0) {
+    panel.classList.add('curioso-alerta');
+    msg = '⚠ Estás gastando más de lo estimado: +' + fmt(diff,2) + ' kWh' +
+          (pct !== null ? ' (' + fmt(pct,1) + '% arriba)' : '') +
+          ' sobre lo que se proyectaba para esta fecha.';
+  } else {
+    panel.classList.add('curioso-ahorro');
+    msg = '✓ ¡Felicidades, estás ahorrando energía! ' + fmt(Math.abs(diff),2) + ' kWh' +
+          (pct !== null ? ' (' + fmt(pct,1) + '%)' : '') +
+          ' menos de lo proyectado.';
+  }
+
+  el.style.opacity = 1;
+  el.textContent = msg;
+  curiosoOverride = { hasta: Date.now() + 6000 };
+  reiniciarBarraCurioso(6000);
+}
+
+// Gestos de swipe (touch) sobre el panel — izquierda = siguiente, derecha = anterior.
+// No se usa preventDefault para no interferir con el scroll vertical de la página.
+(function initSwipeCurioso() {
+  const panel = document.getElementById('curioso-panel');
+  const UMBRAL_PX = 40;
+  let touchStartX = null;
+
+  panel.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].clientX;
+  }, { passive: true });
+
+  panel.addEventListener('touchend', (e) => {
+    if (touchStartX === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    touchStartX = null;
+    if (Math.abs(dx) < UMBRAL_PX) return;
+    irADatoCurioso(dx < 0 ? 1 : -1); // deslizar a la izq. = siguiente, a la der. = anterior
+  }, { passive: true });
+
+  // Soporte extra para arrastrar con mouse (útil al probar en escritorio)
+  let mouseStartX = null;
+  panel.addEventListener('mousedown', (e) => { mouseStartX = e.clientX; });
+  panel.addEventListener('mouseup', (e) => {
+    if (mouseStartX === null) return;
+    const dx = e.clientX - mouseStartX;
+    mouseStartX = null;
+    if (Math.abs(dx) < UMBRAL_PX) return;
+    irADatoCurioso(dx < 0 ? 1 : -1);
+  });
+
+  panel.style.cursor = 'grab';
+})();
+
+setInterval(() => { INTERVALO_CONF = simularIntervaloConfianza(); }, 30000);
+setInterval(cicloCurioso, 500);
+
+/* ═══════════════════════════════════════════════════════════
+   ARRANQUE
+   ═══════════════════════════════════════════════════════════ */
+renderHist();
+renderLecturas();
+tick();
+setInterval(tick, 250);
+siguienteDatoCurioso();
+
+// Encabezado / pie con los datos reales del titular
+document.title = 'CFE Monitor · ' + RECIBO.nombre;
+const elHdr = document.getElementById('hdr-nombre'); if (elHdr) elHdr.textContent = RECIBO.nombre;
+const elFtrN = document.getElementById('ftr-nombre'); if (elFtrN) elFtrN.textContent = RECIBO.nombre;
+const elFtrC = document.getElementById('ftr-ciudad'); if (elFtrC) elFtrC.textContent = RECIBO.ciudad || '';
+const elFtrT = document.getElementById('ftr-tarifa'); if (elFtrT) elFtrT.textContent = 'Tarifa ' + RECIBO.tarifa;
+const chipServ = document.getElementById('chip-servicio'); if (chipServ) chipServ.textContent = RECIBO.servicio;
+const chipTar  = document.getElementById('chip-tarifa');   if (chipTar) chipTar.textContent  = RECIBO.tarifa;
+const chipIni  = document.getElementById('chip-inicio');   if (chipIni) chipIni.textContent  = INICIO_PERIODO.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'}).toUpperCase();
+const chipCorte= document.getElementById('chip-corte');    if (chipCorte) chipCorte.textContent = '~' + new Date(INICIO_MS + PERIODO_DIAS*86400000).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'}).toUpperCase();
+const chipBase = document.getElementById('chip-base');     if (chipBase) chipBase.textContent = LECTURA_MEDIDOR + ' kWh';
+
+const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+setTxt('leg-basico', '$' + fmt(T_BASICO, 3));
+setTxt('leg-inter', '$' + fmt(T_INTER, 3));
+setTxt('leg-excedente', '$' + fmt(T_EXCESS, 3));
+setTxt('tp-basico', '$' + fmt(T_BASICO, 3) + ' / kWh');
+setTxt('tp-inter', '$' + fmt(T_INTER, 3) + ' / kWh');
+setTxt('tp-excedente', '$' + fmt(T_EXCESS, 3) + ' / kWh');
+setTxt('tp-dap', '$' + fmt(DAP, 2));
+
+// Los botones de la tabla de lecturas usan onclick="..." inline en HTML
+// generado dinámicamente, lo cual solo puede resolver funciones GLOBALES.
+// Como estas viven dentro de iniciarAppPrincipal, sin esto los botones
+// Editar/Guardar/Cancelar/Eliminar no hacían nada (bug corregido).
+window.eliminarLectura = eliminarLectura;
+window.iniciarEdicion  = iniciarEdicion;
+window.cancelarEdicion = cancelarEdicion;
+window.guardarEdicion  = guardarEdicion;
+
+} // fin iniciarAppPrincipal
+</script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   ONBOARDING — lógica de arranque, extracción con IA y gate
+   ═══════════════════════════════════════════════════════════ */
+(function () {
+  const OB_KEY_LEGACY = 'cfe_recibo_confirmado_v1';
+  const LECTURAS_KEY_LEGACY = 'cfe_lecturas_reales_v2';
+  const SERVICIOS_KEY = 'cfe_servicios_v1';
+  const SERVICIO_ACTIVO_KEY = 'cfe_servicio_activo_v1';
+
+  function $(id) { return document.getElementById(id); }
+  function showStep(id) {
+    ['ob-step-servicios','ob-step-bienvenida','ob-step-privacidad','ob-step-carga','ob-step-procesando','ob-step-revision']
+      .forEach(s => { const el = $(s); if (el) el.style.display = (s === id ? 'flex' : 'none'); });
+  }
+  function mostrarApp() {
+    $('ob-overlay').style.display = 'none';
+    document.getElementById('cfe-app-root').style.display = '';
+  }
+  function mostrarOnboarding() {
+    document.getElementById('cfe-app-root').style.display = 'none';
+    $('ob-overlay').style.display = '';
+  }
+
+  /* ── Servicios/medidores guardados (varios recibos en paralelo) ── */
+  function cargarServicios() {
+    try {
+      const arr = JSON.parse(localStorage.getItem(SERVICIOS_KEY) || '[]');
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+  function guardarServicios(arr) {
+    try { localStorage.setItem(SERVICIOS_KEY, JSON.stringify(arr)); } catch (e) {}
+  }
+  function servicioActivoId() {
+    try { return localStorage.getItem(SERVICIO_ACTIVO_KEY); } catch (e) { return null; }
+  }
+  function setServicioActivoId(id) {
+    try { localStorage.setItem(SERVICIO_ACTIVO_KEY, id); } catch (e) {}
+  }
+  function nuevoServicioId() { return 'srv' + Date.now() + Math.floor(Math.random() * 1000); }
+  function aliasServicio(RECIBO) {
+    return (RECIBO.nombre || 'Servicio') + ' · ' + (RECIBO.servicio || 's/n');
+  }
+
+  // Migra el formato anterior (un solo recibo, sin lista de servicios) la
+  // primera vez que se carga esta versión, para no perder datos ya guardados.
+  function migrarServicioLegacy() {
+    let servicios = cargarServicios();
+    if (servicios.length > 0) return servicios;
+    let legacy = null;
+    try { legacy = JSON.parse(localStorage.getItem(OB_KEY_LEGACY) || 'null'); } catch (e) { legacy = null; }
+    if (!legacy || !legacy.RECIBO) return servicios;
+    const id = nuevoServicioId();
+    servicios = [{ id, alias: aliasServicio(legacy.RECIBO), RECIBO: legacy.RECIBO, guardadoEn: legacy.guardadoEn }];
+    guardarServicios(servicios);
+    setServicioActivoId(id);
+    try {
+      const lecturasViejas = localStorage.getItem(LECTURAS_KEY_LEGACY);
+      if (lecturasViejas) localStorage.setItem('cfe_lecturas_reales_v2_' + id, lecturasViejas);
+    } catch (e) {}
+    return servicios;
+  }
+
+  // Reinicia los campos de carga por si había imágenes previas cargadas en memoria
+  function resetCamposCarga() {
+    ['frente', 'reverso'].forEach((key) => { if (typeof imgs !== 'undefined') imgs[key] = null; });
+    const pf = $('ob-placeholder-frente'), pr = $('ob-placeholder-reverso');
+    const vf = $('ob-preview-frente'), vr = $('ob-preview-reverso');
+    if (pf) pf.style.display = 'flex';
+    if (pr) pr.style.display = 'flex';
+    if (vf) { vf.style.display = 'none'; vf.removeAttribute('src'); }
+    if (vr) { vr.style.display = 'none'; vr.removeAttribute('src'); }
+    $('ob-box-frente').classList.remove('has-image');
+    $('ob-box-reverso').classList.remove('has-image');
+    $('ob-file-frente').value = '';
+    $('ob-file-reverso').value = '';
+    $('ob-lectura-inicial').value = '';
+    $('ob-check-privacidad').checked = false;
+    $('ob-btn-priv-continuar').disabled = true;
+  }
+
+  function poblarServicios() {
+    const cont = $('ob-servicios-lista');
+    const servicios = cargarServicios();
+    const activoId = servicioActivoId();
+    if (servicios.length === 0) {
+      cont.innerHTML = '<p class="ob-sub">Todavía no tienes ningún servicio guardado.</p>';
+      return;
+    }
+    cont.innerHTML = servicios.map(s => {
+      const esActivo = s.id === activoId;
+      return `<div style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid var(--border-dk); border-radius:8px; margin-bottom:10px; ${esActivo ? 'background:var(--panel-alt);' : ''}">
+        <div style="flex:1; min-width:0;">
+          <div style="font-weight:700; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${s.alias || 'Servicio'}</div>
+          <div style="font-size:11px; color:var(--muted); margin-top:2px;">${esActivo ? 'En uso ahora' : 'Guardado'}</div>
+        </div>
+        <button type="button" class="ob-btn ob-btn-ghost ob-btn-sm ob-servicio-renombrar" data-id="${s.id}" title="Ponerle un nombre propio (ej. Casa, Depa)">Renombrar</button>
+        ${esActivo ? '' : `<button type="button" class="ob-btn ob-btn-ghost ob-btn-sm ob-servicio-usar" data-id="${s.id}">Usar</button>`}
+        <button type="button" class="ob-btn ob-btn-ghost ob-btn-sm ob-servicio-borrar" data-id="${s.id}" title="Eliminar" style="color:var(--red); border-color:var(--red-bd);">Eliminar</button>
+      </div>`;
+    }).join('');
+
+    cont.querySelectorAll('.ob-servicio-usar').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setServicioActivoId(btn.getAttribute('data-id'));
+        location.reload();
+      });
+    });
+    cont.querySelectorAll('.ob-servicio-renombrar').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const servicios = cargarServicios();
+        const s = servicios.find(x => x.id === id);
+        if (!s) return;
+        const nuevoAlias = prompt('Ponle un nombre a este servicio (ej. "Casa", "Depa"):', s.alias || '');
+        if (nuevoAlias === null) return; // canceló
+        const limpio = nuevoAlias.trim();
+        if (!limpio) return;
+        s.alias = limpio;
+        guardarServicios(servicios);
+        poblarServicios();
+      });
+    });
+    cont.querySelectorAll('.ob-servicio-borrar').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const ok = confirm('Esto eliminará este servicio guardado y todas sus lecturas registradas. ¿Continuar?');
+        if (!ok) return;
+        let servicios = cargarServicios().filter(s => s.id !== id);
+        guardarServicios(servicios);
+        try { localStorage.removeItem('cfe_lecturas_reales_v2_' + id); } catch (e) {}
+        if (servicioActivoId() === id) {
+          if (servicios.length > 0) setServicioActivoId(servicios[0].id);
+          else { try { localStorage.removeItem(SERVICIO_ACTIVO_KEY); } catch (e) {} }
+        }
+        location.reload();
+      });
+    });
+  }
+
+  const btnServiciosCerrar = $('ob-btn-servicios-cerrar');
+  if (btnServiciosCerrar) btnServiciosCerrar.addEventListener('click', () => { mostrarApp(); });
+
+  const btnServiciosAgregar = $('ob-btn-servicios-agregar');
+  if (btnServiciosAgregar) {
+    btnServiciosAgregar.addEventListener('click', () => {
+      resetCamposCarga();
+      mostrarOnboarding();
+      showStep('ob-step-bienvenida');
+    });
+  }
+
+  // ── Botón "Cambiar servicio/medidor": abre la lista de servicios guardados,
+  //    con opción de usar otro, agregar uno nuevo o eliminar el actual ──
+  const btnActualizar = $('btn-actualizar-recibo');
+  if (btnActualizar) {
+    btnActualizar.addEventListener('click', () => {
+      poblarServicios();
+      poblarAjustes();
+      mostrarOnboarding();
+      showStep('ob-step-servicios');
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     RESPALDO / EXPORTACIÓN DE DATOS — todo vive en localStorage,
+     así que se ofrece bajar una copia (JSON completo, o CSV solo
+     de lecturas) para no perderlo si se limpia el caché del navegador.
+     ═══════════════════════════════════════════════════════════ */
+  function descargarArchivo(nombre, contenido, tipoMime) {
+    const blob = new Blob([contenido], { type: tipoMime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombre;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function recolectarTodosLosDatos() {
+    const servicios = cargarServicios();
+    return servicios.map(s => {
+      let lecturas = [];
+      try { lecturas = JSON.parse(localStorage.getItem('cfe_lecturas_reales_v2_' + s.id) || '[]'); } catch (e) {}
+      return { id: s.id, alias: s.alias, guardadoEn: s.guardadoEn, RECIBO: s.RECIBO, lecturas };
+    });
+  }
+
+  const btnExportarJSON = $('ob-btn-exportar-json');
+  if (btnExportarJSON) {
+    btnExportarJSON.addEventListener('click', () => {
+      const datos = recolectarTodosLosDatos();
+      const fecha = new Date().toISOString().slice(0, 10);
+      descargarArchivo(`cfe-monitor-respaldo-${fecha}.json`, JSON.stringify(datos, null, 2), 'application/json');
+    });
+  }
+
+  const btnExportarCSV = $('ob-btn-exportar-csv');
+  if (btnExportarCSV) {
+    btnExportarCSV.addEventListener('click', () => {
+      const datos = recolectarTodosLosDatos();
+      const filas = [['servicio', 'fecha_hora', 'lectura_medidor_kwh', 'kwh_consumido', 'origen']];
+      datos.forEach(s => {
+        s.lecturas.forEach(l => {
+          filas.push([s.alias || s.id, l.ts || '', l.medidor ?? '', l.kwh ?? '', l.origen || '']);
+        });
+      });
+      const csv = filas.map(fila => fila.map(v => {
+        const s = String(v);
+        return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      }).join(',')).join('\n');
+      const fecha = new Date().toISOString().slice(0, 10);
+      descargarArchivo(`cfe-monitor-lecturas-${fecha}.csv`, '\uFEFF' + csv, 'text/csv;charset=utf-8');
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     NOTIFICACIÓN AL ACERCARSE AL BLOQUE DE EXCEDENTE (Notification API)
+     ═══════════════════════════════════════════════════════════ */
+  const NOTIF_EXCEDENTE_KEY = 'cfe_notif_excedente_v1';
+  function notifExcedenteActiva() {
+    try { return localStorage.getItem(NOTIF_EXCEDENTE_KEY) === '1'; } catch (e) { return false; }
+  }
+  function poblarAjustes() {
+    const check = $('ob-check-notif-excedente');
+    if (check) check.checked = notifExcedenteActiva() && Notification.permission === 'granted';
+  }
+  const checkNotif = $('ob-check-notif-excedente');
+  if (checkNotif && 'Notification' in window) {
+    checkNotif.addEventListener('change', async () => {
+      if (checkNotif.checked) {
+        const permiso = await Notification.requestPermission();
+        if (permiso !== 'granted') {
+          checkNotif.checked = false;
+          mostrarMensaje('No se activó: el navegador bloqueó el permiso de notificaciones.', 'error');
+          return;
+        }
+        try { localStorage.setItem(NOTIF_EXCEDENTE_KEY, '1'); } catch (e) {}
+      } else {
+        try { localStorage.setItem(NOTIF_EXCEDENTE_KEY, '0'); } catch (e) {}
+      }
+    });
+  } else if (checkNotif) {
+    checkNotif.disabled = true;
+  }
+
+  // ── Si ya existe un servicio activo con recibo confirmado, arranca la app directo.
+  //    OJO: no hacemos "return" aquí — el resto de este script (subida de fotos,
+  //    botón "Extraer datos", claves de Groq, etc.) debe registrarse siempre,
+  //    porque "+ Agregar servicio nuevo" reutiliza esos mismos elementos sin
+  //    recargar la página. ──
+  const servicios = migrarServicioLegacy();
+  let activoId = servicioActivoId();
+  let activo = servicios.find(s => s.id === activoId);
+  if (!activo && servicios.length > 0) {
+    activo = servicios[0];
+    setServicioActivoId(activo.id);
+  }
+  const hayServicioActivo = !!(activo && activo.RECIBO);
+  if (hayServicioActivo) {
+    mostrarApp();
+    iniciarAppPrincipal(activo.RECIBO, activo.id);
+  } else {
+    // ── Si no hay recibo guardado, mostramos el onboarding ──
+    showStep('ob-step-bienvenida');
+  }
+
+  $('ob-btn-empezar').addEventListener('click', () => showStep('ob-step-privacidad'));
+  $('ob-btn-priv-atras').addEventListener('click', () => showStep('ob-step-bienvenida'));
+  $('ob-check-privacidad').addEventListener('change', (e) => {
+    $('ob-btn-priv-continuar').disabled = !e.target.checked;
+  });
+  $('ob-btn-priv-continuar').addEventListener('click', () => showStep('ob-step-carga'));
+  $('ob-btn-carga-atras').addEventListener('click', () => showStep('ob-step-privacidad'));
+
+  // ── API Key de Groq (visión con IA) ──
+  const GROQ_KEY_STORAGE = 'cfe_monitor_groq_key';
+  (function cargarClaveGroq() {
+    try {
+      const guardada = localStorage.getItem(GROQ_KEY_STORAGE);
+      if (guardada) $('ob-groq-key').value = guardada;
+    } catch (e) {}
+  })();
+  $('ob-groq-key').addEventListener('change', () => {
+    try {
+      const v = $('ob-groq-key').value.trim();
+      if (v) localStorage.setItem(GROQ_KEY_STORAGE, v);
+      else localStorage.removeItem(GROQ_KEY_STORAGE);
+    } catch (e) {}
+  });
+  $('ob-groq-toggle').addEventListener('click', () => {
+    const inp = $('ob-groq-key');
+    const mostrar = inp.type === 'password';
+    inp.type = mostrar ? 'text' : 'password';
+    $('ob-groq-toggle').textContent = mostrar ? 'Ocultar' : 'Ver';
+  });
+  function obtenerClaveGroq() {
+    const v = ($('ob-groq-key').value || '').trim();
+    return v || null;
+  }
+
+  // ── Claves de respaldo para Groq Vision: si la clave del campo (o la
+  //    primera de la lista) no responde — rate limit, revocada, error de
+  //    red — se reintenta automáticamente con la siguiente, en orden, antes
+  //    de caer al OCR local. ──
+  const CLAVES_GROQ_RESPALDO = [
+    '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',
+    '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'
+  ];
+
+  function clavesGroqDisponibles() {
+    const delCampo = obtenerClaveGroq();
+    const todas = delCampo ? [delCampo, ...CLAVES_GROQ_RESPALDO] : [...CLAVES_GROQ_RESPALDO];
+    return [...new Set(todas)]; // sin duplicados, por si el campo ya trae una de las de respaldo
+  }
+
+  async function extraerConGroqConRespaldo(imagenes, reportar) {
+    const claves = clavesGroqDisponibles();
+    let ultimoError = null;
+    for (let i = 0; i < claves.length; i++) {
+      try {
+        if (i > 0) reportar && reportar(null, `La clave de Groq anterior no respondió; probando con otra (${i + 1}/${claves.length})…`);
+        return await extraerConGroq(imagenes, claves[i], reportar);
+      } catch (err) {
+        ultimoError = err;
+        console.warn(`Clave de Groq #${i + 1} falló:`, err.message || err);
+      }
+    }
+    throw ultimoError || new Error('Ninguna clave de Groq respondió.');
+  }
+
+  // ── Extracción con Groq Vision (Llama 4 Scout) ──
+  // Recibe un array de dataURLs (imágenes) o un base64 de PDF (ya convertido a imágenes).
+  // Devuelve el mismo objeto que parseReciboCFE.
+  async function extraerConGroq(imagenes, claveGroq, reportar) {
+    reportar && reportar(null, 'Enviando imágenes a Groq (Llama 4 Scout)…');
+
+    const prompt = `Eres un extractor experto de recibos CFE México. Analiza las imágenes del recibo y extrae TODOS los datos disponibles.
+Devuelve ÚNICAMENTE un JSON válido con este formato exacto (sin markdown, sin texto extra):
+{
+  "nombre": "Nombre completo del titular",
+  "ciudad": "Ciudad, Estado",
+  "servicio": "Número de servicio",
+  "tarifa": "01",
+  "periodoInicio": "YYYY-MM-DD",
+  "periodoFin": "YYYY-MM-DD",
+  "corteApartir": "YYYY-MM-DD",
+  "lecturaActual": 1234.56,
+  "lecturaAnterior": 1100.00,
+  "kwhPeriodo": 207,
+  "importeEnergia": 280.50,
+  "dap": 33.39,
+  "totalPagar": 313.00,
+  "tBasico": 1.125,
+  "tIntermedio": 1.369,
+  "tExcedente": 2.859,
+  "hist": [
+    {"desde": "YYYY-MM-DD", "hasta": "YYYY-MM-DD", "kwh": 207, "pago": 313.00},
+    {"desde": "YYYY-MM-DD", "hasta": "YYYY-MM-DD", "kwh": 194, "pago": 289.00}
+  ]
+}
+El histórico (hist) debe incluir TODOS los bimestres visibles en la tabla de CONSUMO HISTÓRICO, del más reciente al más antiguo.
+Convierte fechas como "27 FEB 26 al 29 ABR 26" a formato YYYY-MM-DD (26 = 2026).
+Si un campo no aparece en el recibo, usa null. Los campos numéricos deben ser números, no strings.`;
+
+    // Construir mensajes con todas las imágenes
+    const contenido = [{ type: 'text', text: prompt }];
+    for (const dataUrl of imagenes) {
+      const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+      const mimeType = dataUrl.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+      contenido.push({
+        type: 'image_url',
+        image_url: { url: `data:${mimeType};base64,${base64}` }
+      });
+    }
+
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${claveGroq}`
+      },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        messages: [{ role: 'user', content: contenido }],
+        max_tokens: 2000,
+        temperature: 0.1
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error('Groq: ' + (err.error?.message || `Error ${res.status}`));
+    }
+
+    const data = await res.json();
+    const texto = data.choices?.[0]?.message?.content || '';
+    reportar && reportar(100, 'Interpretando respuesta de Groq…');
+
+    // Parsear JSON
+    const limpio = texto.replace(/```json|```/g, '').trim();
+    let parsed;
+    try { parsed = JSON.parse(limpio); }
+    catch (e) { throw new Error('Groq devolvió una respuesta que no se pudo interpretar. Intenta de nuevo o usa OCR local.'); }
+
+    // Convertir al formato interno que espera poblarRevision
+    const hist = (parsed.hist || []).map(h => {
+      const mesIni = h.desde ? ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'][Number(h.desde.slice(5,7))-1] : '';
+      const mesFin = h.hasta ? ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'][Number(h.hasta.slice(5,7))-1] : '';
+      const per = h.hasta ? `${mesIni}-${mesFin} ${h.hasta.slice(2,4)}` : '';
+      return { per, desde: h.desde || '', hasta: h.hasta || '', kwh: h.kwh, pago: h.pago };
+    });
+
+    return {
+      nombre:         parsed.nombre        || '',
+      ciudad:         parsed.ciudad        || 'México',
+      servicio:       parsed.servicio      || '',
+      tarifa:         parsed.tarifa        || '01',
+      periodoInicio:  parsed.periodoInicio || '',
+      periodoFin:     parsed.periodoFin    || '',
+      corteApartir:   parsed.corteApartir  || '',
+      lecturaActual:  parsed.lecturaActual  != null ? parsed.lecturaActual  : '',
+      lecturaAnterior:parsed.lecturaAnterior!= null ? parsed.lecturaAnterior: '',
+      kwhPeriodo:     parsed.kwhPeriodo    != null ? parsed.kwhPeriodo    : '',
+      importeEnergia: parsed.importeEnergia!= null ? parsed.importeEnergia: '',
+      dap:            parsed.dap           != null ? parsed.dap           : 33.39,
+      totalPagar:     parsed.totalPagar    != null ? parsed.totalPagar    : '',
+      tBasico:        parsed.tBasico       != null ? parsed.tBasico       : 1.125,
+      tIntermedio:    parsed.tIntermedio   != null ? parsed.tIntermedio   : 1.369,
+      tExcedente:     parsed.tExcedente    != null ? parsed.tExcedente    : 2.859,
+      hist,
+      _debugTexto: limpio
+    };
+  }
+
+  // ── Carga y compresión de imágenes ──
+  const imgs = { frente: null, reverso: null }; // dataURL base64 comprimido
+
+  function esHeic(file) {
+    const nombre = (file.name || '').toLowerCase();
+    const tipo = (file.type || '').toLowerCase();
+    return tipo.includes('heic') || tipo.includes('heif') || nombre.endsWith('.heic') || nombre.endsWith('.heif');
+  }
+
+  // Convierte HEIC/HEIF (formato típico de iPhone) a JPEG usando heic2any,
+  // ya que ningún navegador (salvo Safari) puede dibujar HEIC en un canvas.
+  async function normalizarArchivo(file) {
+    if (!esHeic(file)) return file;
+    if (typeof heic2any === 'undefined') {
+      throw new Error('Tu foto está en formato HEIC/HEIF y no se pudo cargar el conversor. Cambia el formato de la cámara de tu teléfono a "Más compatible" (JPEG) o convierte la foto antes de subirla.');
+    }
+    const blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
+    return Array.isArray(blob) ? blob[0] : blob;
+  }
+
+  function comprimirImagen(file, maxW) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      const timeout = setTimeout(() => reject(new Error('La imagen tardó demasiado en procesarse. Intenta con otra foto o formato (JPG/PNG).')), 20000);
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          clearTimeout(timeout);
+          try {
+            const scale = Math.min(1, maxW / img.width);
+            const w = Math.round(img.width * scale) || img.width;
+            const h = Math.round(img.height * scale) || img.height;
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.92));
+          } catch (err) { reject(err); }
+        };
+        img.onerror = () => {
+          clearTimeout(timeout);
+          reject(new Error('El navegador no pudo abrir esta imagen. Prueba con otra foto en formato JPG o PNG.'));
+        };
+        img.src = e.target.result;
+      };
+      reader.onerror = () => {
+        clearTimeout(timeout);
+        reject(new Error('No se pudo leer el archivo seleccionado.'));
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function wireUpload(fileId, boxId, placeholderId, previewId, key) {
+    $(fileId).addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      $('ob-error-carga').style.display = 'none';
+      const placeholder = $(placeholderId);
+      const textoOriginal = placeholder.innerHTML;
+      placeholder.innerHTML = '<div style="font-size:11px;">Procesando…</div>';
+
+      try {
+        const archivoNormalizado = await normalizarArchivo(file);
+        const dataUrl = await comprimirImagen(archivoNormalizado, 1650);
+        imgs[key] = dataUrl;
+        $(previewId).src = dataUrl;
+        $(previewId).style.display = 'block';
+        placeholder.style.display = 'none';
+        $(boxId).classList.add('has-image');
+      } catch (err) {
+        console.error(err);
+        placeholder.innerHTML = textoOriginal;
+        $('ob-error-carga').textContent = err.message || 'No se pudo cargar esa foto. Intenta con otra en formato JPG o PNG.';
+        $('ob-error-carga').style.display = 'block';
+      } finally {
+        // Permite volver a elegir el mismo archivo si hace falta reintentar
+        e.target.value = '';
+      }
+    });
+  }
+  wireUpload('ob-file-frente', 'ob-box-frente', 'ob-placeholder-frente', 'ob-preview-frente', 'frente');
+  wireUpload('ob-file-reverso', 'ob-box-reverso', 'ob-placeholder-reverso', 'ob-preview-reverso', 'reverso');
+
+  // ── Extracción con IA ──
+  let datosExtraidos = null;
+
+  $('ob-btn-extraer').addEventListener('click', async () => {
+    $('ob-error-carga').style.display = 'none';
+    const lecturaInicial = parseFloat($('ob-lectura-inicial').value);
+    // Se fija AQUÍ la hora real de captura (el instante en que el usuario
+    // leyó su medidor y dio "Extraer datos del recibo"), no más tarde al
+    // confirmar la revisión — la extracción y la revisión pueden tardar minutos.
+    const tsCapturaLecturaInicial = new Date().toISOString();
+
+    if (!imgs.frente || !imgs.reverso) {
+      $('ob-error-carga').textContent = 'Sube una foto del anverso y otra del reverso de tu recibo.';
+      $('ob-error-carga').style.display = 'block';
+      return;
+    }
+    if (isNaN(lecturaInicial)) {
+      $('ob-error-carga').textContent = 'Captura la lectura inicial de tu medidor (kWh).';
+      $('ob-error-carga').style.display = 'block';
+      return;
+    }
+
+    showStep('ob-step-procesando');
+    try {
+      datosExtraidos = await extraerDatosDeRecibo({ imgFrenteDataUrl: imgs.frente, imgReversoDataUrl: imgs.reverso });
+      datosExtraidos.lecturaInicialOnboarding = lecturaInicial;
+      datosExtraidos.tsLecturaInicial = tsCapturaLecturaInicial;
+      poblarRevision(datosExtraidos);
+      showStep('ob-step-revision');
+      if (reciboLuceIncompleto(datosExtraidos)) {
+        $('ob-error-revision').textContent = 'La lectura automática no encontró todos los datos con claridad. Revisa y completa a mano lo que haga falta — así siempre queda correcto.';
+        $('ob-error-revision').style.display = 'block';
+      }
+    } catch (err) {
+      console.error(err);
+      // Si falla la extracción, igual dejamos avanzar a un formulario en blanco para captura manual
+      datosExtraidos = plantillaVacia();
+      datosExtraidos.lecturaInicialOnboarding = lecturaInicial;
+      datosExtraidos.tsLecturaInicial = tsCapturaLecturaInicial;
+      poblarRevision(datosExtraidos);
+      $('ob-error-revision').textContent = 'No se pudo leer el recibo automáticamente (' + (err.message || 'error desconocido') + '). Captura los datos manualmente abajo.';
+      $('ob-error-revision').style.display = 'block';
+      showStep('ob-step-revision');
+    }
+  });
+
+  $('ob-btn-revision-reintentar').addEventListener('click', () => showStep('ob-step-carga'));
+
+  function plantillaVacia() {
+    return {
+      nombre: '', ciudad: 'León, Gto', servicio: '', tarifa: '01',
+      periodoInicio: '', periodoFin: '', corteApartir: '',
+      lecturaActual: '', lecturaAnterior: '', kwhPeriodo: '',
+      importeEnergia: '', dap: 33.39, totalPagar: '',
+      tBasico: 1.125, tIntermedio: 1.369, tExcedente: 2.859,
+      hist: []
+    };
+  }
+
+  // ── Preprocesamiento de imagen: mejora la precisión del OCR sin depender
+  //    de ninguna API externa. Escala de grises, estiramiento de contraste
+  //    (por percentiles, robusto a manchas/reflejos puntuales), nitidez
+  //    (unsharp mask) y aumento de resolución si la imagen es pequeña. ──
+  function preprocesarParaOCR(dataUrl) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const anchoObjetivo = Math.max(img.width, 1500);
+          const escala = Math.min(2, anchoObjetivo / img.width);
+          const w = Math.max(1, Math.round(img.width * escala));
+          const h = Math.max(1, Math.round(img.height * escala));
+
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, w, h);
+
+          const imgData = ctx.getImageData(0, 0, w, h);
+          const data = imgData.data;
+          const n = w * h;
+          const gris = new Float32Array(n);
+          const hist = new Array(256).fill(0);
+
+          for (let i = 0, p = 0; i < n; i++, p += 4) {
+            const g = 0.299 * data[p] + 0.587 * data[p + 1] + 0.114 * data[p + 2];
+            gris[i] = g;
+            hist[Math.round(g)]++;
+          }
+
+          // Estiramiento de contraste por percentiles 2%-98% (más robusto que
+          // usar el mínimo/máximo absolutos, que se ven afectados por brillos
+          // puntuales o manchas oscuras en la foto).
+          const p2 = percentil(hist, n, 0.02);
+          const p98 = percentil(hist, n, 0.98);
+          const rango = Math.max(1, p98 - p2);
+
+          const grisAjustado = new Float32Array(n);
+          for (let i = 0; i < n; i++) {
+            let v = ((gris[i] - p2) * 255) / rango;
+            v = Math.max(0, Math.min(255, v));
+            grisAjustado[i] = v;
+          }
+
+          // Nitidez (unsharp mask): resta un desenfoque simple (box blur 3x3)
+          // para realzar bordes de texto, ayudando mucho con fotos movidas.
+          const nitido = unsharpMask(grisAjustado, w, h, 0.6);
+
+          for (let i = 0, p = 0; i < n; i++, p += 4) {
+            const v = nitido[i];
+            data[p] = v; data[p + 1] = v; data[p + 2] = v;
+          }
+          ctx.putImageData(imgData, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        } catch (err) { reject(err); }
+      };
+      img.onerror = () => reject(new Error('No se pudo preprocesar una de las imágenes.'));
+      img.src = dataUrl;
+    });
+  }
+
+  function percentil(hist, total, frac) {
+    const objetivo = total * frac;
+    let acumulado = 0;
+    for (let v = 0; v < 256; v++) {
+      acumulado += hist[v];
+      if (acumulado >= objetivo) return v;
+    }
+    return 255;
+  }
+
+  function unsharpMask(gris, w, h, cantidad) {
+    const blur = new Float32Array(gris.length);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let suma = 0, cuenta = 0;
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const yy = y + dy, xx = x + dx;
+            if (yy >= 0 && yy < h && xx >= 0 && xx < w) {
+              suma += gris[yy * w + xx];
+              cuenta++;
+            }
+          }
+        }
+        blur[y * w + x] = suma / cuenta;
+      }
+    }
+    const salida = new Float32Array(gris.length);
+    for (let i = 0; i < gris.length; i++) {
+      const v = gris[i] + cantidad * (gris[i] - blur[i]);
+      salida[i] = Math.max(0, Math.min(255, v));
+    }
+    return salida;
+  }
+
+  // ── OCR local y gratuito con Tesseract.js (motor open-source, corre en el
+  //    navegador, sin límites de uso ni llamadas a APIs de pago), con
+  //    preprocesamiento previo de imagen + parser por patrones del recibo CFE ──
+  async function extraerDatosDeRecibo({ imgFrenteDataUrl, imgReversoDataUrl } = {}) {
+    const reportar = (pct, msg) => {
+      const el = $('ob-procesando-msg');
+      if (el) el.textContent = msg + (pct != null ? ` (${pct}%)` : '');
+    };
+
+    // ── Usar visión con IA (Groq): primero la clave del campo si hay una,
+    //    luego las de respaldo integradas, en orden, hasta que una responda ──
+    try {
+      return await extraerConGroqConRespaldo([imgFrenteDataUrl, imgReversoDataUrl], reportar);
+    } catch (err) {
+      console.error('Groq Vision falló con todas las claves disponibles, usando OCR local de respaldo:', err);
+      reportar(null, 'Groq no disponible (' + (err.message || 'error') + '); usando OCR local…');
+      // Continúa con el flujo normal de Tesseract abajo
+    }
+
+    reportar(null, 'Mejorando nitidez y contraste de las imágenes');
+    const paginas = [imgFrenteDataUrl, imgReversoDataUrl];
+    const paginasProcesadas = [];
+    for (let i = 0; i < paginas.length; i++) {
+      paginasProcesadas.push(await preprocesarParaOCR(paginas[i]));
+    }
+
+    const worker = await Tesseract.createWorker('spa', 1, {
+      logger: (m) => {
+        if (m.status === 'recognizing text') {
+          reportar(Math.round((m.progress || 0) * 100), `Leyendo página ${paginasProcesadas.length > 1 ? '(' + (m.pageIndex != null ? m.pageIndex + 1 : '') + ')' : 'del recibo'}`);
+        }
+      }
+    });
+
+    let textoFrente = '', textoReverso = '';
+    try {
+      // El reverso solo contiene una tabla de fechas, kWh y montos:
+      // restringir el alfabeto que el OCR puede reconocer ahí (nada de
+      // acentos, símbolos raros, etc.) reduce mucho los errores de lectura.
+      reportar(0, 'Leyendo el anverso del recibo');
+      const resFrente = await worker.recognize(paginasProcesadas[0]);
+      textoFrente = resFrente.data.text || '';
+
+      try {
+        await worker.setParameters({
+          tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,:$/- '
+        });
+      } catch (e) { /* si esta versión de Tesseract.js no lo soporta, seguimos sin whitelist */ }
+
+      reportar(50, 'Leyendo la tabla de histórico');
+      const resReverso = await worker.recognize(paginasProcesadas[1]);
+      textoReverso = resReverso.data.text || '';
+    } finally {
+      await worker.terminate();
+    }
+
+    reportar(100, 'Interpretando los datos leídos');
+    return parseReciboCFE(textoFrente, textoReverso);
+  }
+
+  // ── Parser por expresiones regulares del layout típico de un recibo CFE ──
+  const MESES_ABR = { ENE:1, FEB:2, MAR:3, ABR:4, MAY:5, JUN:6, JUL:7, AGO:8, SEP:9, SET:9, OCT:10, NOV:11, DIC:12 };
+  const MESES_NOMBRE = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function fechaISO(dd, mesAbr, aa) {
+    const mm = MESES_ABR[mesAbr.toUpperCase().slice(0,3)];
+    if (!mm) return '';
+    const aaStr = String(aa).trim();
+    // Acepta año de 4 cifras ("2026") o de 2 cifras ("26", donde <70 = 2000s).
+    const yyyy = aaStr.length >= 4 ? Number(aaStr) : (Number(aaStr) < 70 ? 2000 : 1900) + Number(aaStr);
+    return `${yyyy}-${pad2(mm)}-${pad2(dd)}`;
+  }
+  function numLimpio(s) {
+    if (s == null) return NaN;
+    return parseFloat(String(s).replace(/,/g, '').replace(/\$/g, '').trim());
+  }
+  function buscar(re, texto) {
+    const m = texto.match(re);
+    return m ? m[1] : null;
+  }
+
+  const DIA_MS = 86400000;
+  function diasEntre(isoA, isoB) { return Math.round((new Date(isoB) - new Date(isoA)) / DIA_MS); }
+
+  // Corrige el año de "desde" (y si hace falta el de "hasta") de cada fila
+  // del histórico usando la secuencia: fin de un bimestre = inicio del
+  // bimestre más reciente inmediato, y duración de bimestre entre 40 y 75
+  // días. Así, si el OCR leyó mal un año (ej. "26" en vez de "25"), se
+  // corrige solo, sin depender de que ese dígito se haya leído bien.
+  function corregirSecuenciaHist(hist) {
+    for (let i = 0; i < hist.length; i++) {
+      const h = hist[i];
+      if (!h.desde || !h.hasta) continue;
+
+      // 1) Si el mes/día de "hasta" coincide con el mes/día de "desde" de
+      //    la fila de arriba (más reciente), se usa esa fecha completa tal
+      //    cual — es la misma fecha de corte, no debería variar entre filas.
+      if (i > 0 && hist[i-1].desde && h.hasta.slice(5) === hist[i-1].desde.slice(5)) {
+        h.hasta = hist[i-1].desde;
+      }
+
+      // 2) El año de "desde" se elige entre año(hasta) y año(hasta)-1,
+      //    quedándose con el que da una duración de bimestre razonable
+      //    (40-75 días), y más cercana a 61 si ambos califican.
+      const desdeMD = h.desde.slice(5);
+      const anioHasta = Number(h.hasta.slice(0, 4));
+      let mejor = null;
+      for (const anio of [anioHasta, anioHasta - 1]) {
+        const candidato = `${anio}-${desdeMD}`;
+        const dias = diasEntre(candidato, h.hasta);
+        if (dias > 40 && dias < 75 && (!mejor || Math.abs(dias - 61) < Math.abs(mejor.dias - 61))) {
+          mejor = { candidato, dias };
+        }
+      }
+      if (mejor) h.desde = mejor.candidato;
+    }
+    return hist;
+  }
+
+  function parseReciboCFE(textoFrenteRaw, textoReversoRaw) {
+    const F = textoFrenteRaw.replace(/\r/g, '');
+    const R = textoReversoRaw.replace(/\r/g, '');
+    const FU = F.toUpperCase();
+
+    // Nombre del titular: línea en mayúsculas, sin dígitos, cerca del inicio, después del
+    // logo "CFE" y antes de "NO. DE SERVICIO" o la dirección.
+    let nombre = '';
+    const lineasIniciales = F.split('\n').slice(0, 15);
+    for (const l of lineasIniciales) {
+      const t = l.trim();
+      if (t.length >= 8 && t.length <= 45 &&
+          /^[A-ZÁÉÍÓÚÑÜ ]+$/.test(t) &&
+          !/CFE|COMISI|FEDERAL|ELECTRICIDAD|TOTAL A PAGAR|MILLONES|RAZONES|MEXICO/i.test(t)) {
+        nombre = t;
+        break;
+      }
+    }
+
+    const servicio = buscar(/NO\.?\s*DE\s*SERVICIO\s*:?\s*([0-9]{6,15})/i, FU) || '';
+    const tarifaMatch = buscar(/TARIFA\s*:?\s*([0-9A-Z]{1,3})\b/i, FU);
+    const tarifa = tarifaMatch || '01';
+
+    const corteMatch = FU.match(/CORTE\s*A\s*PARTIR\s*:?\s*([0-9]{1,2})\s*([A-Z]{3})\s*([0-9]{2})/i);
+    const corteApartir = corteMatch ? fechaISO(corteMatch[1], corteMatch[2], corteMatch[3]) : '';
+
+    const periodoMatch = FU.match(/PERIODO\s*FACTURADO\s*:?\s*([0-9]{1,2})\s*([A-Z]{3})\s*([0-9]{2})\s*[-–—]\s*([0-9]{1,2})\s*([A-Z]{3})\s*([0-9]{2})/i);
+    const periodoInicio = periodoMatch ? fechaISO(periodoMatch[1], periodoMatch[2], periodoMatch[3]) : '';
+    const periodoFin    = periodoMatch ? fechaISO(periodoMatch[4], periodoMatch[5], periodoMatch[6]) : '';
+
+    // Lecturas de medidor: dos números de 4-6 dígitos cerca de "ENERGIA" / "KWH"
+    let lecturaActual = NaN, lecturaAnterior = NaN;
+    const bloqueLecturas = FU.split(/ENERG[IÍ]A\s*\(?\s*KWH\)?/i)[1] || '';
+    // El texto real del PDF puede traer coma de miles (ej. "28,699"), algo que
+    // el OCR de fotos casi nunca produce. Se intenta primero el patrón con
+    // coma y, si no aplica, el de dígitos corridos de siempre.
+    const numsLectura = (bloqueLecturas.match(/\b0?\d{1,3}(?:,\d{3})+\b|\b0?\d{4,6}\b/g) || []).map(numLimpio);
+    if (numsLectura.length >= 2) {
+      lecturaActual = numsLectura[0];
+      lecturaAnterior = numsLectura[1];
+    }
+
+    // Precios por escalón: valores tipo X.XXX cerca de 1.0–1.9 (básico/intermedio) y 2.5–3.5 (excedente)
+    const preciosDecimales = (F.match(/\b[0-9]\.[0-9]{3}\b/g) || []).map(Number);
+    const candidatosBasico = preciosDecimales.filter(n => n >= 0.7 && n <= 1.3);
+    const candidatosInter  = preciosDecimales.filter(n => n > 1.3 && n <= 2.0);
+    const candidatosExced  = preciosDecimales.filter(n => n > 2.0 && n <= 4.0);
+    const tBasico = candidatosBasico[0] || 1.125;
+    const tIntermedio = candidatosInter[0] || 1.369;
+    const tExcedente = candidatosExced[0] || 2.859;
+
+    // Los montos del texto real del PDF suelen traer coma de miles (ej.
+    // "1,234.56"), a diferencia del OCR de fotos que normalmente la pierde.
+    // NUM_MONEY acepta ambos casos: con coma de miles o sin ella.
+    const NUM_MONEY = '[0-9]{1,3}(?:,[0-9]{3})*\\.[0-9]{2}';
+    const importeEnergia = numLimpio(buscar(new RegExp('ENERG[IÍ]A\\s+(' + NUM_MONEY + ')\\s*\\n', 'i'), F))
+      || numLimpio(buscar(new RegExp('ENERG[IÍ]A\\s+(' + NUM_MONEY + ')', 'i'), FU));
+    const dap = numLimpio(buscar(new RegExp('DAP[^\\d\\n]{0,12}(' + NUM_MONEY + ')', 'i'), FU)) || 33.39;
+    const totalPagarDesglose = numLimpio(buscar(new RegExp('TOTAL\\s+\\$?\\s*(' + NUM_MONEY + ')', 'i'), FU));
+    const totalPagarCabecera = numLimpio(buscar(/TOTAL\s*A\s*PAGAR\s*:?\s*\$?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)/i, FU));
+    const totalPagar = !isNaN(totalPagarDesglose) ? totalPagarDesglose : (totalPagarCabecera || 0);
+
+    const kwhPeriodo = (!isNaN(lecturaActual) && !isNaN(lecturaAnterior)) ? (lecturaActual - lecturaAnterior) : NaN;
+
+    // Histórico de consumo (reverso): se han visto dos formatos reales de
+    // fecha en distintos recibos CFE, así que se prueban ambos:
+    //   1) "27 FEB 2026 – 29 ABR 2026"  (año de 4 cifras, separador "–"/"-",
+    //      sin las palabras "del"/"al" — el más común en el texto real del PDF)
+    //   2) "DEL 27 FEB 26 AL 29 ABR 26" (año de 2 cifras, con "del"/"al" —
+    //      visto en OCR de fotos y algunos recibos impresos)
+    // Se intenta primero el formato 1 y, solo si no encuentra nada, el 2.
+    const hist = [];
+    const RU = R.toUpperCase();
+
+    // El año de 4 cifras es lo que distingue este patrón de la línea
+    // "PERIODO FACTURADO: DD MES AA - DD MES AA" del anverso (que usa año de
+    // 2 cifras), así que no hay riesgo de que ese texto colisione aquí.
+    const reHistNuevo = /([0-9]{1,2})\s*([A-Z]{3,9})\.?\s*(20[0-9]{2})\s*[-–—]\s*([0-9]{1,2})\s*([A-Z]{3,9})\.?\s*(20[0-9]{2})\D{0,20}?([0-9]{1,3}(?:,[0-9]{3})*)\D{1,15}?[\$S]?\s*([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2})/gi;
+    const reHistViejo = /DEL\s*([0-9]{1,2})\s*([A-Z]{3,9})\.?\s*([0-9]{2})\s*AL\s*([0-9]{1,2})\s*([A-Z]{3,9})\.?\s*([0-9]{2})\D{0,20}?([0-9]{1,3}(?:,[0-9]{3})*)\D{1,15}?[\$S]?\s*([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2})/gi;
+
+    function extraerConPatron(re) {
+      const filas = [];
+      let mm;
+      while ((mm = re.exec(RU)) !== null) {
+        const desde = fechaISO(mm[1], mm[2], mm[3]);
+        const hasta = fechaISO(mm[4], mm[5], mm[6]);
+        if (!desde || !hasta) continue;
+        filas.push({ desde, hasta, kwh: numLimpio(mm[7]), pago: numLimpio(mm[8]) });
+      }
+      return filas;
+    }
+
+    hist.push(...extraerConPatron(reHistNuevo));
+    if (hist.length === 0) hist.push(...extraerConPatron(reHistViejo));
+
+    // El recibo lista los bimestres del más reciente (arriba) al más
+    // antiguo (abajo). Dos reglas físicas permiten corregir años que el
+    // OCR haya leído mal:
+    //   1) El FIN de un bimestre coincide con el INICIO del bimestre
+    //      inmediato más reciente (misma fecha de "corte").
+    //   2) Un bimestre dura entre 40 y 75 días (normalmente ~61).
+    // Con esas dos reglas se puede reconstruir el año correcto usando
+    // la secuencia, aunque el OCR haya leído mal el año de alguna fila.
+    corregirSecuenciaHist(hist);
+
+    hist.forEach(h => {
+      const mesIni = MESES_NOMBRE[Number(h.desde.slice(5,7)) - 1];
+      const mesFin = MESES_NOMBRE[Number(h.hasta.slice(5,7)) - 1];
+      h.per = `${mesIni}-${mesFin} ${h.hasta.slice(2,4)}`;
+    });
+
+    return {
+      nombre, ciudad: 'León, Gto', servicio, tarifa,
+      periodoInicio, periodoFin, corteApartir,
+      lecturaActual: isNaN(lecturaActual) ? '' : lecturaActual,
+      lecturaAnterior: isNaN(lecturaAnterior) ? '' : lecturaAnterior,
+      kwhPeriodo: isNaN(kwhPeriodo) ? '' : kwhPeriodo,
+      importeEnergia: importeEnergia || '',
+      dap, totalPagar,
+      tBasico, tIntermedio, tExcedente,
+      hist,
+      // Texto crudo tal cual lo leyó el OCR/pdf.js, para poder depurar sin
+      // adivinar: se muestra en un panel colapsable en la pantalla de revisión.
+      _debugTexto: (F === R) ? F : ('── ANVERSO ──\n' + F + '\n\n── REVERSO ──\n' + R)
+    };
+  }
+
+  // ── Motor de fallback: si el OCR local no encuentra suficientes datos,
+  //    igual se abre la pantalla de revisión para captura/edición manual ──
+  function reciboLuceIncompleto(d) {
+    return !d.nombre || !d.servicio || d.lecturaActual === '' || d.periodoFin === '';
+  }
+
+  // ── Construye el formulario de revisión/edición ──
+  function campo(id, label, value, tipo, full) {
+    return `<div class="ob-field${full ? ' full' : ''}">
+      <label class="ob-label">${label}</label>
+      <input class="ob-input" id="${id}" type="${tipo || 'text'}" value="${value === undefined || value === null ? '' : value}">
+    </div>`;
+  }
+
+  function poblarRevision(d) {
+    $('ob-review-grid').innerHTML = [
+      campo('rv-nombre', 'Titular', d.nombre, 'text', true),
+      campo('rv-servicio', 'No. de servicio', d.servicio, 'text'),
+      campo('rv-tarifa', 'Tarifa', d.tarifa, 'text'),
+      campo('rv-ciudad', 'Ciudad', d.ciudad, 'text'),
+      campo('rv-corte', 'Corte a partir (AAAA-MM-DD)', d.corteApartir, 'date'),
+      campo('rv-periodo-inicio', 'Período — inicio', d.periodoInicio, 'date'),
+      campo('rv-periodo-fin', 'Período — fin', d.periodoFin, 'date'),
+      campo('rv-lectura-actual', 'Lectura actual (kWh)', d.lecturaActual, 'number'),
+      campo('rv-lectura-anterior', 'Lectura anterior (kWh)', d.lecturaAnterior, 'number'),
+      campo('rv-kwh-periodo', 'Total kWh del período', d.kwhPeriodo, 'number'),
+      campo('rv-importe-energia', 'Importe Energía ($)', d.importeEnergia, 'number'),
+      campo('rv-dap', 'DAP ($)', d.dap, 'number'),
+      campo('rv-total-pagar', 'Total a pagar ($)', d.totalPagar, 'number'),
+      campo('rv-t-basico', 'Precio Básico ($/kWh)', d.tBasico, 'number'),
+      campo('rv-t-inter', 'Precio Intermedio ($/kWh)', d.tIntermedio, 'number'),
+      campo('rv-t-excedente', 'Precio Excedente ($/kWh)', d.tExcedente, 'number'),
+      campo('rv-lectura-inicial', 'Lectura inicial capturada ahora (kWh)', d.lecturaInicialOnboarding, 'number', true),
+    ].join('');
+
+    // Si la extracción automática no encontró histórico (o encontró menos del
+    // mínimo requerido), se precargan filas vacías hasta llegar al mínimo —
+    // así el usuario ve de entrada cuántos bimestres tiene que llenar a mano,
+    // en vez de una tabla vacía que obliga a darle "+ Agregar bimestre" una
+    // y otra vez sin ninguna guía visual de cuántos hacen falta.
+    const histInicial = (d.hist && d.hist.length ? d.hist.slice() : []);
+    while (histInicial.length < MIN_BIMESTRES) histInicial.push({});
+    renderHistTable(histInicial);
+
+    // Panel de depuración: se sigue guardando el texto crudo en el textarea
+    // (por si algún día hace falta), pero ya no se muestra en pantalla al usuario.
+    const debugWrap = $('ob-debug-texto-wrap');
+    if (debugWrap) {
+      if (d._debugTexto) $('ob-debug-texto').value = d._debugTexto;
+      debugWrap.style.display = 'none';
+    }
+  }
+
+  const MIN_BIMESTRES = 4;
+
+  // Cuenta filas completas (con los 4 campos llenos) e incompletas (con algún
+  // campo vacío) de la tabla de histórico, y refleja el resultado en el aviso
+  // bajo la tabla — así el usuario ve en todo momento si le faltan bimestres
+  // o si dejó una fila a medias, sin tener que esperar al botón "avanzar".
+  function leerFilasHist() {
+    return [...document.querySelectorAll('#ob-hist-tbody tr')].map(tr => {
+      const desde = tr.querySelector('[data-hist="desde"]').value;
+      const hasta = tr.querySelector('[data-hist="hasta"]').value;
+      const kwhStr = tr.querySelector('[data-hist="kwh"]').value;
+      const pagoStr = tr.querySelector('[data-hist="pago"]').value;
+      const completa = !!(desde && hasta && kwhStr !== '' && pagoStr !== '');
+      const vacia = !desde && !hasta && kwhStr === '' && pagoStr === '';
+      return { desde, hasta, kwh: parseFloat(kwhStr), pago: parseFloat(pagoStr), completa, vacia };
+    });
+  }
+
+  function actualizarContadorHist() {
+    const el = $('ob-hist-contador');
+    if (!el) return;
+    const filas = leerFilasHist();
+    const completas = filas.filter(f => f.completa).length;
+    const incompletas = filas.filter(f => !f.completa && !f.vacia).length;
+    let msg = `${completas} de ${MIN_BIMESTRES} bimestres mínimos capturados (mientras más, mejor).`;
+    if (incompletas > 0) msg += ` Hay ${incompletas} fila(s) a medio llenar — complétalas o bórralas con ✕.`;
+    el.textContent = msg;
+    el.style.color = (completas >= MIN_BIMESTRES && incompletas === 0) ? '#1a7f37' : '#b45309';
+    return { completas, incompletas };
+  }
+
+  function engancharContadorHist() {
+    const tbody = $('ob-hist-tbody');
+    if (!tbody) return;
+    tbody.addEventListener('input', actualizarContadorHist);
+    actualizarContadorHist();
+  }
+
+  function renderHistTable(hist) {
+    const rows = hist.map((h, i) => filaHist(h, i)).join('');
+    $('ob-hist-table').innerHTML = `
+      <thead><tr><th>Desde</th><th>Hasta</th><th>kWh</th><th>Pago ($)</th><th></th></tr></thead>
+      <tbody id="ob-hist-tbody">${rows}</tbody>`;
+    $('ob-hist-tbody').querySelectorAll('.ob-hist-del').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.target.closest('tr').remove();
+        actualizarContadorHist();
+      });
+    });
+    engancharContadorHist();
+  }
+  function filaHist(h, i) {
+    return `<tr>
+      <td><input type="date" value="${h.desde || ''}" data-hist="desde"></td>
+      <td><input type="date" value="${h.hasta || ''}" data-hist="hasta"></td>
+      <td><input type="number" value="${h.kwh ?? ''}" data-hist="kwh"></td>
+      <td><input type="number" value="${h.pago ?? ''}" data-hist="pago"></td>
+      <td><button type="button" class="ob-hist-del">✕</button></td>
+    </tr>`;
+  }
+
+  $('ob-btn-hist-add').addEventListener('click', () => {
+    const tbody = $('ob-hist-tbody');
+    tbody.insertAdjacentHTML('beforeend', filaHist({}, tbody.children.length));
+    tbody.lastElementChild.querySelector('.ob-hist-del').addEventListener('click', (e) => {
+      e.target.closest('tr').remove();
+      actualizarContadorHist();
+    });
+    actualizarContadorHist();
+  });
+
+  const btnDebugCopiar = $('ob-btn-debug-copiar');
+  if (btnDebugCopiar) {
+    btnDebugCopiar.addEventListener('click', async () => {
+      const ta = $('ob-debug-texto');
+      try {
+        await navigator.clipboard.writeText(ta.value);
+        btnDebugCopiar.textContent = '¡Copiado!';
+      } catch (e) {
+        // Sin permiso de portapapeles: se selecciona el texto para copiar manual (Ctrl/Cmd+C).
+        ta.select();
+        btnDebugCopiar.textContent = 'Selecciona y copia (Ctrl/Cmd+C)';
+      }
+      setTimeout(() => { btnDebugCopiar.textContent = 'Copiar texto'; }, 2000);
+    });
+  }
+
+  // ── Confirmar y construir el objeto RECIBO final que usará la app ──
+  $('ob-btn-revision-confirmar').addEventListener('click', () => {
+    $('ob-error-revision').style.display = 'none';
+    try {
+      const val = (id) => $(id).value;
+      const num = (id) => parseFloat($(id).value);
+
+      const filasHist = leerFilasHist();
+      const filasIncompletas = filasHist.filter(f => !f.completa && !f.vacia);
+      if (filasIncompletas.length > 0) {
+        throw new Error(`Hay ${filasIncompletas.length} bimestre(s) del histórico a medio llenar. Completa las 4 columnas (Desde, Hasta, kWh y Pago) de cada fila, o bórrala con el botón ✕ si no aplica.`);
+      }
+
+      const hist = filasHist.filter(f => f.completa).map(f => {
+        const mesIni = MESES_NOMBRE[Number(f.desde.slice(5,7)) - 1];
+        const mesFin = MESES_NOMBRE[Number(f.hasta.slice(5,7)) - 1];
+        const per = `${mesIni}-${mesFin} ${f.hasta.slice(2,4)}`;
+        return { per, desde: f.desde, hasta: f.hasta, kwh: f.kwh, pago: f.pago };
+      });
+
+      if (hist.length < MIN_BIMESTRES) {
+        throw new Error(`Captura al menos ${MIN_BIMESTRES} bimestres del histórico (llevas ${hist.length}). Mientras más bimestres captures, más preciso será el análisis.`);
+      }
+
+      const periodoFin = val('rv-periodo-fin');
+      const corteApartir = val('rv-corte');
+      const lecturaActual = num('rv-lectura-actual');
+      const lecturaInicialOnboarding = num('rv-lectura-inicial');
+
+      if (!val('rv-nombre') || !periodoFin || isNaN(lecturaActual) || isNaN(lecturaInicialOnboarding)) {
+        throw new Error('Faltan datos obligatorios: titular, fin de período, lectura actual y lectura inicial.');
+      }
+
+      // El período actual arranca el día después del fin del período facturado
+      const finDate = new Date(periodoFin + 'T00:00:01');
+      const inicioActual = new Date(finDate.getTime() + 86400000);
+
+      // Duración del período: preferimos la del propio período facturado; si no
+      // es calculable, usamos 61 días (ciclo bimestral estándar CFE).
+      let diasPeriodo = 61;
+      const periodoInicio = val('rv-periodo-inicio');
+      if (periodoInicio) {
+        const inicioAnt = new Date(periodoInicio + 'T00:00:01');
+        const dias = Math.round((finDate - inicioAnt) / 86400000) + 1;
+        if (dias > 20 && dias < 120) diasPeriodo = dias;
+      }
+
+      const ahoraISO = new Date().toISOString();
+      // La lectura inicial se marca con la hora real en que el usuario la
+      // capturó (al dar "Extraer datos del recibo"), no con la hora de este
+      // clic de confirmación, que puede llegar minutos u horas después.
+      // IMPORTANTE: se conserva el ISO completo (con la "Z" de UTC); si se
+      // corta, luego "new Date(...)" la reinterpreta como hora LOCAL y la
+      // fecha/hora se corre varias horas (ese fue el bug del salto de día).
+      const tsLecturaInicial = (datosExtraidos && datosExtraidos.tsLecturaInicial)
+        ? datosExtraidos.tsLecturaInicial
+        : ahoraISO;
+
+      const RECIBO = {
+        nombre: val('rv-nombre'),
+        ciudad: val('rv-ciudad') || 'México',
+        servicio: val('rv-servicio'),
+        tarifa: val('rv-tarifa') || '01',
+        corteApartir: corteApartir,
+        inicioPeriodoActual: inicioActual.toISOString(),
+        diasPeriodo: diasPeriodo,
+        lecturaActual: lecturaActual,
+        lecturaAnterior: num('rv-lectura-anterior'),
+        kwhPeriodo: num('rv-kwh-periodo'),
+        importeEnergia: num('rv-importe-energia'),
+        dap: num('rv-dap'),
+        totalPagar: num('rv-total-pagar'),
+        tBasico: num('rv-t-basico') || 1.125,
+        tIntermedio: num('rv-t-inter') || 1.369,
+        tExcedente: num('rv-t-excedente') || 2.859,
+        hist: hist,
+        seedLecturas: [
+          { ts: tsLecturaInicial, medidor: lecturaInicialOnboarding, origen: 'inicial' }
+        ]
+      };
+
+      const nuevaId = nuevoServicioId();
+      const servicios = cargarServicios();
+      servicios.push({ id: nuevaId, alias: aliasServicio(RECIBO), RECIBO, guardadoEn: ahoraISO });
+      guardarServicios(servicios);
+      setServicioActivoId(nuevaId);
+      location.reload();
+    } catch (err) {
+      $('ob-error-revision').textContent = err.message || 'Revisa que todos los campos numéricos y fechas sean válidos.';
+      $('ob-error-revision').style.display = 'block';
+    }
+  });
+})();
+</script>
+<script>
+  // Registro del Service Worker — solo funciona servido por http(s), no
+  // abriendo el archivo directo (file://) ni en navegadores sin soporte.
+  if ('serviceWorker' in navigator && (location.protocol === 'http:' || location.protocol === 'https:')) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch((err) => {
+        console.warn('[CFE Monitor] No se pudo registrar el Service Worker:', err);
+      });
+    });
+  }
+
+  // ── Botón "Instalar app" — solo aparece cuando Chrome/Edge confirman que
+  //    la PWA cumple los requisitos de instalación (manifest + SW + HTTPS).
+  //    En navegadores que no disparan este evento (ej. iOS Safari) el
+  //    panel simplemente se queda oculto, sin romper nada. ──
+  (function () {
+    let promptDiferido = null;
+    const panel = document.getElementById('panel-instalar-app');
+    const boton = document.getElementById('btn-instalar-app');
+
+    // Si ya corre como app instalada, nunca mostrar el botón.
+    const yaInstalada = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (yaInstalada) return;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      promptDiferido = e;
+      if (panel) panel.style.display = '';
+    });
+
+    if (boton) {
+      boton.addEventListener('click', async () => {
+        if (!promptDiferido) return;
+        boton.disabled = true;
+        promptDiferido.prompt();
+        try { await promptDiferido.userChoice; } catch (e) {}
+        promptDiferido = null;
+        boton.disabled = false;
+        if (panel) panel.style.display = 'none';
+      });
+    }
+
+    window.addEventListener('appinstalled', () => {
+      promptDiferido = null;
+      if (panel) panel.style.display = 'none';
+    });
+  })();
+</script>
+</body>
+</html>
